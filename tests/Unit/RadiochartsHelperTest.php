@@ -29,7 +29,7 @@ class RadiochartsHelperTest extends TestCase
      */
     private function makeHelper(): RadiochartsHelper
     {
-        $db = $this->createMock(\Joomla\Database\DatabaseInterface::class);
+        $db = $this->createStub(\Joomla\Database\DatabaseInterface::class);
 
         return new RadiochartsHelper($db);
     }
