@@ -1,0 +1,3 @@
+# Composer dependencies - not tracked in version control
+/vendor/
+composer.lock

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="task" method="upgrade">
+    <name>PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_LOCAL</name>
+    <author>Gonzo Radio</author>
+    <creationDate>April 2026</creationDate>
+    <copyright>(C) 2026 Gonzo Radio. All rights reserved.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <authorEmail>dev@gonzoradio.com</authorEmail>
+    <version>1.0.0</version>
+    <description>PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_LOCAL_XML_DESCRIPTION</description>
+
+    <namespace path="src">Gonzoradio\Plugin\Task\CiwvRadiochartsMediabaseLocal</namespace>
+
+    <files>
+        <folder plugin="ciwv_radiocharts_mediabase_local">services</folder>
+        <folder>src</folder>
+        <folder>forms</folder>
+    </files>
+
+    <languages>
+        <language tag="en-GB">language/en-GB/plg_task_ciwv_radiocharts_mediabase_local.ini</language>
+        <language tag="en-GB">language/en-GB/plg_task_ciwv_radiocharts_mediabase_local.sys.ini</language>
+    </languages>
+</extension>
