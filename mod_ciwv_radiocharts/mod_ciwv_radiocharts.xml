@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="module" client="site" method="upgrade">
+    <name>MOD_CIWV_RADIOCHARTS</name>
+    <author>Gonzo Radio</author>
+    <creationDate>April 2026</creationDate>
+    <copyright>(C) 2026 Gonzo Radio. All rights reserved.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <authorEmail>dev@gonzoradio.com</authorEmail>
+    <version>1.0.0</version>
+    <description>MOD_CIWV_RADIOCHARTS_XML_DESCRIPTION</description>
+
+    <namespace path="src">Gonzoradio\Module\CiwvRadiocharts</namespace>
+
+    <files>
+        <filename module="mod_ciwv_radiocharts">mod_ciwv_radiocharts.php</filename>
+        <folder>src</folder>
+        <folder>tmpl</folder>
+    </files>
+
+    <languages>
+        <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.ini</language>
+        <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.sys.ini</language>
+    </languages>
+
+    <install>
+        <sql>
+            <file driver="mysql" charset="utf8">sql/install.mysql.utf8.sql</file>
+        </sql>
+    </install>
+
+    <uninstall>
+        <sql>
+            <file driver="mysql" charset="utf8">sql/uninstall.mysql.utf8.sql</file>
+        </sql>
+    </uninstall>
+
+    <config>
+        <fields name="params">
+            <fieldset name="basic">
+                <field
+                    name="week_offset"
+                    type="number"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_WEEK_OFFSET_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_WEEK_OFFSET_DESC"
+                    default="0"
+                    min="-52"
+                    max="0"
+                />
+
+                <field
+                    name="show_sources"
+                    type="checkboxes"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_SOURCES_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_SOURCES_DESC"
+                    default="mediabase_national,mediabase_local,luminate,musicmaster"
+                >
+                    <option value="mediabase_national">MOD_CIWV_RADIOCHARTS_SOURCE_MEDIABASE_NATIONAL</option>
+                    <option value="mediabase_local">MOD_CIWV_RADIOCHARTS_SOURCE_MEDIABASE_LOCAL</option>
+                    <option value="luminate">MOD_CIWV_RADIOCHARTS_SOURCE_LUMINATE</option>
+                    <option value="musicmaster">MOD_CIWV_RADIOCHARTS_SOURCE_MUSICMASTER</option>
+                </field>
+
+                <field
+                    name="limit"
+                    type="number"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_LIMIT_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_LIMIT_DESC"
+                    default="50"
+                    min="1"
+                    max="200"
+                />
+
+                <field
+                    name="show_comparison"
+                    type="radio"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_COMPARISON_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_COMPARISON_DESC"
+                    default="1"
+                    class="switcher"
+                >
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+            </fieldset>
+        </fields>
+    </config>
+</extension>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Task plugin form for: ciwv_radiocharts_mediabase_national
+    Rendered by Joomla Task Scheduler when creating/editing a task of this type.
+-->
+<form>
+    <fields name="params">
+        <fieldset name="import_mediabase_national"
+                  label="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELDSET_LABEL">
+
+            <field name="api_endpoint"
+                   type="url"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_API_ENDPOINT_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_API_ENDPOINT_DESC"
+                   required="true"
+                   size="80"
+                   default="https://api.mediabase.com/v1"
+            />
+
+            <field name="api_key"
+                   type="password"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_API_KEY_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_API_KEY_DESC"
+                   required="true"
+                   size="60"
+            />
+
+            <field name="chart_format"
+                   type="text"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_CHART_FORMAT_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_CHART_FORMAT_DESC"
+                   default="AC"
+                   size="20"
+            />
+
+            <field name="week_date"
+                   type="calendar"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_WEEK_DATE_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MEDIABASE_NATIONAL_FIELD_WEEK_DATE_DESC"
+                   format="%Y-%m-%d"
+                   filter="date"
+            />
+
+        </fieldset>
+    </fields>
+</form>

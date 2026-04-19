@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+    <fields name="params">
+        <fieldset name="import_musicmaster"
+                  label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELDSET_LABEL">
+
+            <field name="csv_path"
+                   type="text"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_CSV_PATH_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_CSV_PATH_DESC"
+                   required="true"
+                   size="100"
+            />
+
+            <field name="has_header_row"
+                   type="radio"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_HAS_HEADER_ROW_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_HAS_HEADER_ROW_DESC"
+                   default="1"
+                   class="switcher"
+            >
+                <option value="1">JYES</option>
+                <option value="0">JNO</option>
+            </field>
+
+            <!-- Column index mapping (zero-based) -->
+            <field name="col_position"
+                   type="number"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_POSITION_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_INDEX_DESC"
+                   default="0"
+                   min="0"
+            />
+
+            <field name="col_artist"
+                   type="number"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_ARTIST_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_INDEX_DESC"
+                   default="1"
+                   min="0"
+            />
+
+            <field name="col_title"
+                   type="number"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_TITLE_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_INDEX_DESC"
+                   default="2"
+                   min="0"
+            />
+
+            <field name="col_label"
+                   type="number"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_LABEL_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
+                   default="3"
+                   min="-1"
+            />
+
+            <field name="col_plays"
+                   type="number"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_PLAYS_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
+                   default="4"
+                   min="-1"
+            />
+
+            <field name="col_peak_position"
+                   type="number"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_PEAK_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
+                   default="5"
+                   min="-1"
+            />
+
+            <field name="col_weeks_on_chart"
+                   type="number"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_WOC_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
+                   default="6"
+                   min="-1"
+            />
+
+            <field name="week_date"
+                   type="calendar"
+                   label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_WEEK_DATE_LABEL"
+                   description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_WEEK_DATE_DESC"
+                   format="%Y-%m-%d"
+                   filter="date"
+            />
+
+        </fieldset>
+    </fields>
+</form>
