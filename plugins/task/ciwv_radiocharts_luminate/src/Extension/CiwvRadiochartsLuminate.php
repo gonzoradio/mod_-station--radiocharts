@@ -178,11 +178,12 @@ class CiwvRadiochartsLuminate extends CMSPlugin implements DatabaseAwareInterfac
      */
     private function fetchLuminateStreams(string $endpoint, string $apiKey, string $marketId, string $formatId, string $weekDate): ?array
     {
-        $url = rtrim($endpoint, '/') . '/streaming/chart'
-            . '?api_key=' . urlencode($apiKey)
-            . '&market=' . urlencode($marketId)
-            . '&format=' . urlencode($formatId)
-            . '&week=' . urlencode($weekDate);
+        $url = rtrim($endpoint, '/') . '/streaming/chart?' . http_build_query([
+            'api_key' => $apiKey,
+            'market'  => $marketId,
+            'format'  => $formatId,
+            'week'    => $weekDate,
+        ]);
 
         return $this->httpGetJson($url);
     }

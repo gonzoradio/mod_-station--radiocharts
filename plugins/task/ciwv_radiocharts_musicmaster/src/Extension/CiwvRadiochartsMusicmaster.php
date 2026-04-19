@@ -129,13 +129,14 @@ class CiwvRadiochartsMusicmaster extends CMSPlugin implements DatabaseAwareInter
         }
 
         // Column index mapping (zero-based), configurable in task params.
+        // A value of -1 means that column is not present in this export.
         $colPosition      = (int) ($params->col_position      ?? 0);
         $colArtist        = (int) ($params->col_artist         ?? 1);
         $colTitle         = (int) ($params->col_title          ?? 2);
-        $colLabel         = isset($params->col_label)         ? (int) $params->col_label         : null;
-        $colPlays         = isset($params->col_plays)         ? (int) $params->col_plays         : null;
-        $colPeakPosition  = isset($params->col_peak_position) ? (int) $params->col_peak_position : null;
-        $colWeeksOnChart  = isset($params->col_weeks_on_chart) ? (int) $params->col_weeks_on_chart : null;
+        $colLabel         = isset($params->col_label)         && (int) $params->col_label         >= 0 ? (int) $params->col_label         : null;
+        $colPlays         = isset($params->col_plays)         && (int) $params->col_plays         >= 0 ? (int) $params->col_plays         : null;
+        $colPeakPosition  = isset($params->col_peak_position) && (int) $params->col_peak_position >= 0 ? (int) $params->col_peak_position : null;
+        $colWeeksOnChart  = isset($params->col_weeks_on_chart) && (int) $params->col_weeks_on_chart >= 0 ? (int) $params->col_weeks_on_chart : null;
         $hasHeaderRow     = (bool) ($params->has_header_row ?? 1);
 
         $tracks = $this->parseCsv(
@@ -214,8 +215,16 @@ class CiwvRadiochartsMusicmaster extends CMSPlugin implements DatabaseAwareInter
         ?int $colPeakPosition,
         ?int $colWeeksOnChart
     ): ?array {
-        $handle = @fopen($path, 'r');
+        if (!is_readable($path)) {
+            $this->logTask(sprintf('Music Master: could not open CSV file: %s', $path), 'error');
 
+            return null;
+        }
+
+        $handle = fopen($path, 'r');
+
+        // is_readable() passed, but fopen() can still fail in rare edge cases
+        // (e.g. a race condition where the file is removed between the check and open).
         if ($handle === false) {
             $this->logTask(sprintf('Music Master: could not open CSV file: %s', $path), 'error');
 

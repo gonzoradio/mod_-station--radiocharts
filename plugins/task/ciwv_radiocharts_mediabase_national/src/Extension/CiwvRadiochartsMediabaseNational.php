@@ -197,10 +197,11 @@ class CiwvRadiochartsMediabaseNational extends CMSPlugin implements DatabaseAwar
      */
     private function fetchMediabaseNationalChart(string $endpoint, string $apiKey, string $chartFormat, string $weekDate): ?array
     {
-        $url = rtrim($endpoint, '/') . '/national'
-            . '?api_key=' . urlencode($apiKey)
-            . '&format=' . urlencode($chartFormat)
-            . '&week=' . urlencode($weekDate);
+        $url = rtrim($endpoint, '/') . '/national?' . http_build_query([
+            'api_key' => $apiKey,
+            'format'  => $chartFormat,
+            'week'    => $weekDate,
+        ]);
 
         return $this->httpGetJson($url);
     }

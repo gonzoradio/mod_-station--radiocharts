@@ -171,11 +171,12 @@ class CiwvRadiochartsMediabaseLocal extends CMSPlugin implements DatabaseAwareIn
      */
     private function fetchMediabaseLocalChart(string $endpoint, string $apiKey, string $stationId, string $chartFormat, string $weekDate): ?array
     {
-        $url = rtrim($endpoint, '/') . '/station'
-            . '?api_key=' . urlencode($apiKey)
-            . '&station=' . urlencode($stationId)
-            . '&format=' . urlencode($chartFormat)
-            . '&week=' . urlencode($weekDate);
+        $url = rtrim($endpoint, '/') . '/station?' . http_build_query([
+            'api_key' => $apiKey,
+            'station' => $stationId,
+            'format'  => $chartFormat,
+            'week'    => $weekDate,
+        ]);
 
         return $this->httpGetJson($url);
     }

@@ -92,7 +92,7 @@ class RadiochartsHelper
             ))
             ->from($this->db->quoteName('#__ciwv_radiocharts'))
             ->where($this->db->quoteName('week_date') . ' = ' . $this->db->quote($weekDate))
-            ->whereIn($this->db->quoteName('source'), $sources)
+            ->whereIn($this->db->quoteName('source'), array_map([$this->db, 'quote'], $sources), false)
             ->order($this->db->quoteName('source') . ' ASC, ' . $this->db->quoteName('position') . ' ASC')
             ->setLimit($limit * count($sources));
 

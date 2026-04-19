@@ -53,7 +53,7 @@
                    label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_LABEL_LABEL"
                    description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
                    default="3"
-                   min="0"
+                   min="-1"
             />
 
             <field name="col_plays"
@@ -61,7 +61,7 @@
                    label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_PLAYS_LABEL"
                    description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
                    default="4"
-                   min="0"
+                   min="-1"
             />
 
             <field name="col_peak_position"
@@ -69,7 +69,7 @@
                    label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_PEAK_LABEL"
                    description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
                    default="5"
-                   min="0"
+                   min="-1"
             />
 
             <field name="col_weeks_on_chart"
@@ -77,7 +77,7 @@
                    label="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_WOC_LABEL"
                    description="PLG_TASK_CIWV_RADIOCHARTS_MUSICMASTER_FIELD_COL_OPTIONAL_INDEX_DESC"
                    default="6"
-                   min="0"
+                   min="-1"
             />
 
             <field name="week_date"

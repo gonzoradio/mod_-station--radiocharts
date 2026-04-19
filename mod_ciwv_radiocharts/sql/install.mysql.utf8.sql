@@ -3,17 +3,17 @@
 -- Each row represents one track's chart position for a given week and data source.
 
 CREATE TABLE IF NOT EXISTS `#__ciwv_radiocharts` (
-    `id`              INT(11)       NOT NULL AUTO_INCREMENT,
+    `id`              INT           NOT NULL AUTO_INCREMENT,
     `week_date`       DATE          NOT NULL                COMMENT 'Week start date (Monday)',
     `source`          VARCHAR(50)   NOT NULL                COMMENT 'Data source: mediabase_national | mediabase_local | luminate | musicmaster',
-    `position`        INT(11)       NOT NULL DEFAULT 0      COMMENT 'Chart position this week',
+    `position`        INT           NOT NULL DEFAULT 0      COMMENT 'Chart position this week',
     `artist`          VARCHAR(255)  NOT NULL,
     `title`           VARCHAR(255)  NOT NULL,
     `label`           VARCHAR(255)  DEFAULT NULL            COMMENT 'Record label',
-    `plays`           INT(11)       NOT NULL DEFAULT 0      COMMENT 'Spin / play count (Mediabase & Music Master)',
-    `streams`         BIGINT(20)    NOT NULL DEFAULT 0      COMMENT 'Stream count (Luminate)',
-    `peak_position`   INT(11)       DEFAULT NULL            COMMENT 'All-time peak chart position',
-    `weeks_on_chart`  INT(11)       DEFAULT NULL            COMMENT 'Consecutive weeks charting',
+    `plays`           INT           NOT NULL DEFAULT 0      COMMENT 'Spin / play count (Mediabase & Music Master)',
+    `streams`         BIGINT        NOT NULL DEFAULT 0      COMMENT 'Stream count (Luminate)',
+    `peak_position`   INT           DEFAULT NULL            COMMENT 'All-time peak chart position',
+    `weeks_on_chart`  INT           DEFAULT NULL            COMMENT 'Consecutive weeks charting',
     `created_at`      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
