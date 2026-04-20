@@ -9,7 +9,7 @@
     <version>1.0.0</version>
     <description>MOD_CIWV_RADIOCHARTS_XML_DESCRIPTION</description>
 
-    <namespace path="src">Gonzoradio\Module\CiwvRadiocharts</namespace>
+    <namespace path="src">Gonzoradio\Module\CiwvRadiocharts\Site</namespace>
 
     <files>
         <filename module="mod_ciwv_radiocharts">mod_ciwv_radiocharts.php</filename>
@@ -17,6 +17,10 @@
         <folder>src</folder>
         <folder>tmpl</folder>
     </files>
+
+    <media destination="mod_ciwv_radiocharts" folder="media">
+        <folder>css</folder>
+    </media>
 
     <languages>
         <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.ini</language>
