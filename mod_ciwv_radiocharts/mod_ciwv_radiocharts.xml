@@ -13,6 +13,7 @@
 
     <files>
         <filename module="mod_ciwv_radiocharts">mod_ciwv_radiocharts.php</filename>
+        <filename>services.php</filename>
         <folder>src</folder>
         <folder>tmpl</folder>
     </files>
