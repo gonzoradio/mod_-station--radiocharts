@@ -16,6 +16,7 @@ use Gonzoradio\Module\CiwvRadiocharts\Site\Helper\RadiochartsHelper;
 use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
+use Joomla\CMS\Uri\Uri;
 
 /**
  * Dispatcher class for mod_ciwv_radiocharts.
@@ -39,6 +40,11 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     {
         $data   = parent::getLayoutData();
         $params = $data['params'];
+
+        // Enqueue the module stylesheet.
+        $this->getApplication()->getDocument()->addStyleSheet(
+            Uri::root(true) . '/media/mod_ciwv_radiocharts/css/mod_ciwv_radiocharts.css'
+        );
 
         /** @var RadiochartsHelper $helper */
         $helper = $this->getHelperFactory()->getHelper('RadiochartsHelper');

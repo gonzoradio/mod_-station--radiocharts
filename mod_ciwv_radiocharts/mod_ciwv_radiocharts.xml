@@ -18,6 +18,10 @@
         <folder>tmpl</folder>
     </files>
 
+    <media destination="mod_ciwv_radiocharts" folder="media">
+        <folder>css</folder>
+    </media>
+
     <languages>
         <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.ini</language>
         <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.sys.ini</language>
