@@ -50,12 +50,21 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $helper = $this->getHelperFactory()->getHelper('RadiochartsHelper');
 
         $weekOffset  = (int) $params->get('week_offset', 0);
-        $limit       = (int) $params->get('limit', 50);
+        $limit       = max(1, (int) $params->get('limit', 50));
         $showSources = $params->get('show_sources', ['mediabase_national', 'mediabase_local', 'luminate', 'musicmaster']);
 
-        // Normalise show_sources to an array (Joomla may store it as a comma-separated string).
+        // Normalise show_sources to a plain PHP array regardless of what the Registry returns
+        // (string = single saved value, stdClass/object = JSON object, null = param not yet saved).
         if (is_string($showSources)) {
-            $showSources = array_filter(explode(',', $showSources));
+            $showSources = array_values(array_filter(explode(',', $showSources)));
+        } elseif (!is_array($showSources)) {
+            // Handles null, stdClass, Registry, or any other type.
+            $showSources = $showSources !== null ? array_values((array) $showSources) : [];
+        }
+
+        // Fall back to all sources when the param resolves to an empty array.
+        if (empty($showSources)) {
+            $showSources = ['mediabase_national', 'mediabase_local', 'luminate', 'musicmaster'];
         }
 
         $weekDate        = $helper->getWeekDate($weekOffset);

@@ -69,6 +69,9 @@ class RadiochartsHelper implements DatabaseAwareInterface
             return [];
         }
 
+        // A limit of 0 would remove the SQL LIMIT clause entirely; enforce a minimum of 1.
+        $limit = max(1, $limit);
+
         $query = $this->getDatabase()->getQuery(true)
             ->select($this->getDatabase()->quoteName(
                 ['id', 'week_date', 'source', 'position', 'artist', 'title', 'label', 'plays', 'streams', 'peak_position', 'weeks_on_chart']
@@ -79,8 +82,13 @@ class RadiochartsHelper implements DatabaseAwareInterface
             ->order($this->getDatabase()->quoteName('source') . ' ASC, ' . $this->getDatabase()->quoteName('position') . ' ASC')
             ->setLimit($limit * count($sources));
 
-        $this->getDatabase()->setQuery($query);
-        $rows = $this->getDatabase()->loadObjectList();
+        try {
+            $this->getDatabase()->setQuery($query);
+            $rows = $this->getDatabase()->loadObjectList();
+        } catch (\RuntimeException $e) {
+            // Table may not exist yet (module installed without running the SQL installer).
+            return [];
+        }
 
         // Group by source and honour per-source limit.
         $grouped = [];
