@@ -4,7 +4,6 @@
     <author>Gonzo Radio / Durham Radio Inc.</author>
     <version>3.0.0</version>
     <description>Interactive radio-chart dashboard for CIWV. Merges Station Playlist, National Chart, Luminate streaming data, Music Master and Billboard into a sortable, week-tracked dashboard with DB-backed state.</description>
-    <namespace prefix="Gonzoradio">Gonzoradio\Module\CiwvRadiocharts\Site</namespace>
     <files>
         <filename module="mod_ciwv_radiocharts">mod_ciwv_radiocharts.php</filename>
         <filename>helper.php</filename>
@@ -13,6 +12,7 @@
         <folder>ajax</folder>
         <folder>media</folder>
         <folder>data-examples</folder>
+        <folder>sql</folder>
     </files>
     <languages>
         <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.ini</language>
