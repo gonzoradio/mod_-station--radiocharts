@@ -41,7 +41,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $params = $data['params'];
 
         /** @var RadiochartsHelper $helper */
-        $helper = $this->getHelperFactory()->getHelper('RadiochartsHelper', $data);
+        $helper = $this->getHelperFactory()->getHelper('RadiochartsHelper');
 
         $weekOffset  = (int) $params->get('week_offset', 0);
         $limit       = (int) $params->get('limit', 50);
