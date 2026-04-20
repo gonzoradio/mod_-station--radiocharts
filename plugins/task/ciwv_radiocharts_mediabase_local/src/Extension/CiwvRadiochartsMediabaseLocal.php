@@ -127,16 +127,15 @@ class CiwvRadiochartsMediabaseLocal extends CMSPlugin implements DatabaseAwareIn
 
         foreach ($tracks as $track) {
             $ok = $helper->upsertEntry(
-                $weekDate,
-                'mediabase_local',
-                (int) ($track['position'] ?? 0),
-                (string) ($track['artist'] ?? ''),
-                (string) ($track['title'] ?? ''),
-                (string) ($track['label'] ?? '') ?: null,
-                (int) ($track['plays'] ?? 0),
-                0,
-                isset($track['peak_position']) ? (int) $track['peak_position'] : null,
-                isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
+                weekDate:     $weekDate,
+                source:       'mediabase_local',
+                position:     (int) ($track['position'] ?? 0),
+                artist:       (string) ($track['artist'] ?? ''),
+                title:        (string) ($track['title'] ?? ''),
+                label:        (string) ($track['label'] ?? '') ?: null,
+                plays:        (int) ($track['plays'] ?? 0),
+                peakPosition: isset($track['peak_position']) ? (int) $track['peak_position'] : null,
+                weeksOnChart: isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
             );
 
             if ($ok) {

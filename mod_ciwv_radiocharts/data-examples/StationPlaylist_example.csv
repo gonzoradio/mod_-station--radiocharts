@@ -1,0 +1,9 @@
+"Station Playlist",,,,,,,,,,,,,,,,,,,,,,,,
+"Report Cycle: Published        LW: 02/15/2026 - 02/21/2026        TW: 02/22/2026 - 02/28/2026        Panel: Mediabase - All Canadian Stations        GRC: Currents and Recurrents        Show Top: 150        Station: CIWV-FM/Canada-Main AC/Vancouver, BC/Durham Radio Inc",,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+"Station Rank",,Artist,Title,Cancon,Label,Year,Spins,,,Dayparts,,,,,"Market Info",,Impressions,,"Historical Data Since: 11/23/2023",,"Format Comparison",,,"6am to 7pm",,"W/O Ovn",
+LW,TW,,,,,,TW,LW,+/-,OVN,AMD,MID,PMD,EVE,"CIWV-FM Share(%)","Market Spins TW","Reach/ Mill","Imp Rank","First Played","Hist Spins",Rank,Avg,CIWV,Rank,TW,Rank,TW
+2,1,"EXAMPLE ARTIST","Example Song Title",,"No Coincidence",2025,16,17,-1,4,2,4,3,3,100,16,0.000,3,12/09/25,200,426,16,0,1,9,2,12
+3,2,"SECOND ARTIST","Another Great Song",,Epic,2025,16,16,0,4,3,3,3,3,100,16,0.000,4,12/03/25,212,423,16,0,2,9,1,12
+4,3,"CANADIAN ARTIST","Cancon Song",,Atlantic,2026,16,16,0,4,3,3,3,3,9,184,0.000,1,01/20/26,103,1,20,-4,3,9,4,12
+5,4,"FOURTH ARTIST","Billboard Hit",,Atlantic,2025,16,16,0,4,2,4,2,4,94,17,0.000,2,12/30/25,150,97,3,+13,4,8,3,12

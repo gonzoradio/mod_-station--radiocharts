@@ -6,8 +6,14 @@
     <copyright>(C) 2026 Gonzo Radio. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
     <authorEmail>dev@gonzoradio.com</authorEmail>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <description>MOD_CIWV_RADIOCHARTS_XML_DESCRIPTION</description>
+
+    <!--
+        DATABASE NOTE: The d6f25_ciwv_radiocharts table is managed externally.
+        Run sql/install.mysql.utf8.sql manually on first install or upgrade.
+        No automatic SQL is executed during module install/uninstall.
+    -->
 
     <namespace path="src">Gonzoradio\Module\CiwvRadiocharts\Site</namespace>
 
@@ -16,6 +22,7 @@
         <filename>services.php</filename>
         <folder>src</folder>
         <folder>tmpl</folder>
+        <folder>data-examples</folder>
     </files>
 
     <media destination="mod_ciwv_radiocharts" folder="media">
@@ -27,21 +34,25 @@
         <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.sys.ini</language>
     </languages>
 
-    <install>
-        <sql>
-            <file driver="mysql" charset="utf8">sql/install.mysql.utf8.sql</file>
-        </sql>
-    </install>
-
-    <uninstall>
-        <sql>
-            <file driver="mysql" charset="utf8">sql/uninstall.mysql.utf8.sql</file>
-        </sql>
-    </uninstall>
-
     <config>
         <fields name="params">
+
+            <!-- ═══════════════════════════════════════════════════════
+                 BASIC DISPLAY SETTINGS
+                 ═══════════════════════════════════════════════════════ -->
             <fieldset name="basic">
+
+                <field
+                    name="station_callsign"
+                    type="text"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_STATION_CALLSIGN_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_STATION_CALLSIGN_DESC"
+                    default="CIWV"
+                    size="20"
+                    maxlength="20"
+                    filter="cmd"
+                />
+
                 <field
                     name="week_offset"
                     type="number"
@@ -51,19 +62,6 @@
                     min="-52"
                     max="0"
                 />
-
-                <field
-                    name="show_sources"
-                    type="checkboxes"
-                    label="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_SOURCES_LABEL"
-                    description="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_SOURCES_DESC"
-                    default="mediabase_national,mediabase_local,luminate,musicmaster"
-                >
-                    <option value="mediabase_national">MOD_CIWV_RADIOCHARTS_SOURCE_MEDIABASE_NATIONAL</option>
-                    <option value="mediabase_local">MOD_CIWV_RADIOCHARTS_SOURCE_MEDIABASE_LOCAL</option>
-                    <option value="luminate">MOD_CIWV_RADIOCHARTS_SOURCE_LUMINATE</option>
-                    <option value="musicmaster">MOD_CIWV_RADIOCHARTS_SOURCE_MUSICMASTER</option>
-                </field>
 
                 <field
                     name="limit"
@@ -86,7 +84,81 @@
                     <option value="1">JYES</option>
                     <option value="0">JNO</option>
                 </field>
+
+                <field
+                    name="allow_category_edit"
+                    type="radio"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_ALLOW_CATEGORY_EDIT_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_ALLOW_CATEGORY_EDIT_DESC"
+                    default="0"
+                    class="switcher"
+                >
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+
             </fieldset>
+
+            <!-- ═══════════════════════════════════════════════════════
+                 DATA SOURCES
+                 Six CSV upload types — check/uncheck to show in dashboard.
+                 Source identifiers match the `source` column in
+                 d6f25_ciwv_radiocharts.
+                 ═══════════════════════════════════════════════════════ -->
+            <fieldset name="sources">
+
+                <field
+                    name="show_sources"
+                    type="checkboxes"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_SOURCES_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_SHOW_SOURCES_DESC"
+                    default="mediabase_national,mediabase_local,luminate,luminate_market,musicmaster,billboard"
+                >
+                    <!-- 1. Mediabase Published 7-Day National Chart -->
+                    <option value="mediabase_national">MOD_CIWV_RADIOCHARTS_SOURCE_MEDIABASE_NATIONAL</option>
+                    <!-- 2. Mediabase Station Playlist (local airplay data) -->
+                    <option value="mediabase_local">MOD_CIWV_RADIOCHARTS_SOURCE_MEDIABASE_LOCAL</option>
+                    <!-- 3. Luminate Streaming Data — national (Canada) -->
+                    <option value="luminate">MOD_CIWV_RADIOCHARTS_SOURCE_LUMINATE</option>
+                    <!-- 4. Luminate Streaming Data — market (e.g. Vancouver) -->
+                    <option value="luminate_market">MOD_CIWV_RADIOCHARTS_SOURCE_LUMINATE_MARKET</option>
+                    <!-- 5. Music Master internal CSV export -->
+                    <option value="musicmaster">MOD_CIWV_RADIOCHARTS_SOURCE_MUSICMASTER</option>
+                    <!-- 6. Billboard Chart -->
+                    <option value="billboard">MOD_CIWV_RADIOCHARTS_SOURCE_BILLBOARD</option>
+                </field>
+
+            </fieldset>
+
+            <!-- ═══════════════════════════════════════════════════════
+                 UPLOAD SETTINGS
+                 ═══════════════════════════════════════════════════════ -->
+            <fieldset name="upload">
+
+                <field
+                    name="upload_dir"
+                    type="text"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_UPLOAD_DIR_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_UPLOAD_DIR_DESC"
+                    default="media/mod_ciwv_radiocharts/uploads"
+                    size="60"
+                    filter="path"
+                />
+
+                <field
+                    name="allow_example_download"
+                    type="radio"
+                    label="MOD_CIWV_RADIOCHARTS_FIELD_ALLOW_EXAMPLE_DOWNLOAD_LABEL"
+                    description="MOD_CIWV_RADIOCHARTS_FIELD_ALLOW_EXAMPLE_DOWNLOAD_DESC"
+                    default="1"
+                    class="switcher"
+                >
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+
+            </fieldset>
+
         </fields>
     </config>
 </extension>

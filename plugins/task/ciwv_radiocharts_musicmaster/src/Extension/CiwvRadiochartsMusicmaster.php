@@ -29,7 +29,7 @@ use Joomla\Event\SubscriberInterface;
  * Music Master is a broadcast scheduling application.  The PD generates a
  * weekly export (CSV) from Music Master and places it in an agreed location
  * (local server path or accessible URL).  This plugin reads that file and
- * imports the data into the `#__ciwv_radiocharts` table.
+ * imports the data into the `d6f25_ciwv_radiocharts` table.
  *
  * Expected CSV columns (configurable via column-index settings):
  *   Position, Artist, Title, Label, Plays, Peak Position, Weeks On Chart
@@ -160,16 +160,15 @@ class CiwvRadiochartsMusicmaster extends CMSPlugin implements DatabaseAwareInter
 
         foreach ($tracks as $track) {
             $ok = $helper->upsertEntry(
-                $weekDate,
-                'musicmaster',
-                (int) ($track['position'] ?? 0),
-                (string) ($track['artist'] ?? ''),
-                (string) ($track['title'] ?? ''),
-                (string) ($track['label'] ?? '') ?: null,
-                (int) ($track['plays'] ?? 0),
-                0,
-                isset($track['peak_position']) ? (int) $track['peak_position'] : null,
-                isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
+                weekDate:     $weekDate,
+                source:       'musicmaster',
+                position:     (int) ($track['position'] ?? 0),
+                artist:       (string) ($track['artist'] ?? ''),
+                title:        (string) ($track['title'] ?? ''),
+                label:        (string) ($track['label'] ?? '') ?: null,
+                plays:        (int) ($track['plays'] ?? 0),
+                peakPosition: isset($track['peak_position']) ? (int) $track['peak_position'] : null,
+                weeksOnChart: isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
             );
 
             if ($ok) {
