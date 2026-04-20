@@ -17,6 +17,14 @@ require_once JPATH_BASE . '/includes/framework.php';
 
 use Joomla\CMS\Factory;
 
+// Initialise the site application so the session (and therefore the logged-in
+// user) is available when we call Factory::getUser() below.
+try {
+    Factory::getApplication('site');
+} catch (\Throwable $ignore) {
+    // Carry on – the auth check below will handle a genuine guest.
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 try {

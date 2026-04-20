@@ -643,9 +643,18 @@ class ModCiwvRadiochartsHelper
         if ($ext !== 'csv') {
             return 'Error: only CSV files are accepted.';
         }
-        // MIME type check (text/csv, text/plain, application/csv)
+        // MIME type check – accept all common CSV MIME types, including what
+        // Windows browsers send when Excel is the default .csv handler.
         $mime = $file['type'] ?? '';
-        if ($mime !== '' && !in_array(strtolower($mime), ['text/csv', 'text/plain', 'application/csv'], true)) {
+        $allowedMimes = [
+            'text/csv',
+            'text/plain',
+            'application/csv',
+            'text/comma-separated-values',
+            'application/vnd.ms-excel',   // Windows / Internet Explorer / Edge
+            'application/octet-stream',   // generic binary sent by some browsers
+        ];
+        if ($mime !== '' && !in_array(strtolower($mime), $allowedMimes, true)) {
             return 'Error: unexpected file type ' . htmlspecialchars($mime) . '.';
         }
         if (!is_dir($dataDir)) {

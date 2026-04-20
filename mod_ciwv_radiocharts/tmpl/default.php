@@ -42,7 +42,8 @@ foreach ($nwCats as $cat) {
 </div>
 
 <?php if (!empty($uploadResult)): ?>
-<div class="rc-upload-status"><?= htmlspecialchars($uploadResult) ?></div>
+<?php $isUploadError = (strncmp($uploadResult, 'Error:', 6) === 0); ?>
+<div class="rc-upload-status<?= $isUploadError ? ' rc-upload-error' : '' ?>"><?= htmlspecialchars($uploadResult) ?></div>
 <?php endif; ?>
 
 <!-- CSV example templates -->
