@@ -1,9 +1,4 @@
 <?php
-// Enable error reporting for debugging (remove in production)
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 ob_start();
 
 if (!defined('_JEXEC')) {
@@ -34,7 +29,7 @@ try {
             $saveWeek = $data['week_start'] ?? null;
             $metaLine = $data['meta_line'] ?? '';
 
-            // Fallback to extracting from CSV if not provided (for legacy or safety)
+            // Fallback to extracting from CSV if not provided
             if (!$saveWeek) {
                 $base = JPATH_BASE . '/modules/mod_radiochartsdashboard/data/';
                 $playlistFile = $base . 'Station Playlist.csv';
@@ -43,18 +38,21 @@ try {
                 }
                 list($twStart, $lwStart) = RadiochartsdashboardHelper::extractWeekDatesFromStationPlaylist($playlistFile);
                 if (!$twStart) {
-                    error_log("EXPORT CSV: Failed to extract TW start date from Station Playlist ($playlistFile)");
                     echo json_encode(['success' => false, 'error' => 'Could not determine report week from Station Playlist.']);
                     exit;
                 }
                 $saveWeek = $twStart;
             }
 
-            // (Recommended) Save meta_line in a new column "meta_line" (add this to your table)
             $stateJson = json_encode($data['state']);
-            $query = "INSERT INTO `d6f21_radiochartsdashboard_state` (`week_start`, `state_json`, `meta_line`, `saved_at`)
-                      VALUES (" . $db->quote($saveWeek) . ", " . $db->quote($stateJson) . ", " . $db->quote($metaLine) . ", NOW())
-                      ON DUPLICATE KEY UPDATE `state_json`=VALUES(`state_json`), `meta_line`=VALUES(`meta_line`), `saved_at`=NOW()";
+            // Use '#__' prefix so Joomla replaces it with the configured DB prefix.
+            $query = 'INSERT INTO ' . $db->quoteName('#__radiochartsdashboard_state')
+                . ' (' . $db->quoteName('week_start') . ', ' . $db->quoteName('state_json') . ', ' . $db->quoteName('meta_line') . ', ' . $db->quoteName('saved_at') . ')'
+                . ' VALUES (' . $db->quote($saveWeek) . ', ' . $db->quote($stateJson) . ', ' . $db->quote($metaLine) . ', NOW())'
+                . ' ON DUPLICATE KEY UPDATE '
+                . $db->quoteName('state_json') . ' = VALUES(' . $db->quoteName('state_json') . '), '
+                . $db->quoteName('meta_line')  . ' = VALUES(' . $db->quoteName('meta_line')  . '), '
+                . $db->quoteName('saved_at')   . ' = NOW()';
             $db->setQuery($query);
             $db->execute();
 
@@ -72,10 +70,6 @@ try {
 } catch (Throwable $e) {
     ob_clean();
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage(),
-        'trace' => $e->getTraceAsString()
-    ]);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;
 }

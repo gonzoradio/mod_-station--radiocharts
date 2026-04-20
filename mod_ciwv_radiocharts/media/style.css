@@ -30,6 +30,12 @@
     color: #2e7d32;
 }
 
+.rc-upload-status.rc-upload-error {
+    background: #ffebee;
+    border-color: #ef9a9a;
+    color: #c62828;
+}
+
 .rc-examples {
     margin-bottom: 0.75em;
     font-size: 0.9em;

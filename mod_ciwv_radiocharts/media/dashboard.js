@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tw:              row.querySelector('select[name="TW[]"]')?.value ?? '',
       nw:              row.querySelector('select[name="NW[]"]')?.value ?? '',
       'Stn Rk TW':     row.cells[COL.stn_rk_tw]?.textContent.trim()  ?? '',
-      'Stn Rk LW':     row.cells[COL.stn_rk_up]?.textContent.trim()  ?? '',
+      'Stn Rk LW':     '',  // Stn Rk LW is not a visible column; populated by helper.php only
       'Stn Rk UP':     row.cells[COL.stn_rk_up]?.textContent.trim()  ?? '',
       artist:          row.cells[COL.artist]?.textContent.trim()      ?? '',
       title:           row.cells[COL.title]?.textContent.trim()       ?? '',

@@ -16,6 +16,17 @@ require_once JPATH_BASE . '/includes/framework.php';
 
 use Joomla\CMS\Factory;
 
+// Initialise the site application so the session (and therefore the logged-in
+// user) is available when we call Factory::getUser() below.  Without this,
+// a raw-file bootstrap only loads the autoloader and Factory::getUser() falls
+// back to a guest object, causing the 403 "Authentication required" branch.
+try {
+    Factory::getApplication('site');
+} catch (\Throwable $ignore) {
+    // If the application is already running or cannot be created in this
+    // context, carry on – the auth check below will catch any real problem.
+}
+
 header('Content-Type: application/json; charset=utf-8');
 
 ob_start();
@@ -71,6 +82,9 @@ try {
         exit;
     }
 
+    // Use VALUES() alias syntax for broad MySQL 5.7 / 8.x compatibility.
+    // The "INSERT … AS new_row … ON DUPLICATE KEY UPDATE … = new_row.col"
+    // form requires MySQL ≥ 8.0.19 and fails on older servers.
     $query = 'INSERT INTO ' . $db->quoteName('#__ciwv_radiocharts_state')
         . ' (' . $db->quoteName('week_start') . ', '
         . $db->quoteName('state_json') . ', '
@@ -78,10 +92,10 @@ try {
         . $db->quoteName('saved_at') . ')'
         . ' VALUES (' . $db->quote($saveWeek) . ', '
         . $db->quote($stateJson) . ', '
-        . $db->quote($metaLine) . ', NOW()) AS new_row'
+        . $db->quote($metaLine) . ', NOW())'
         . ' ON DUPLICATE KEY UPDATE '
-        . $db->quoteName('state_json') . ' = new_row.' . $db->quoteName('state_json') . ', '
-        . $db->quoteName('meta_line')  . ' = new_row.' . $db->quoteName('meta_line')  . ', '
+        . $db->quoteName('state_json') . ' = VALUES(' . $db->quoteName('state_json') . '), '
+        . $db->quoteName('meta_line')  . ' = VALUES(' . $db->quoteName('meta_line')  . '), '
         . $db->quoteName('saved_at')   . ' = NOW()';
     $db->setQuery($query);
     $db->execute();
