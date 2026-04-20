@@ -1,0 +1,10 @@
+,,,,,,,,,,,,,,,,,,,,,
+"TW: Feb 22 - Feb 28        LW: Feb 15 - Feb 21        Panel: Mediabase - Published Canada Panel        Format: Hot AC        Min Spins Cut off: 1        Hide French Songs: Yes",,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+Rank,,,Artist,Title,Label,Cancon,Spins,,,Dayparts,,,,,Impressions,Stations,,"Avg. Station Rotations",,,
+LW,TW,,,,,,TW,LW,+/-,OVN,AMD,MID,PMD,EVE,TW,On,New,On,TW,LW,+/-
+1,1,,"EXAMPLE ARTIST","Example Song Title",Atlantic,,1647,1636,11,460,220,342,277,348,4.914,33,0,33,49.9,49.6,0.3
+2,2,,"SECOND ARTIST","Another Great Song",Island/Republic,,1580,1594,-14,405,240,316,261,358,4.613,33,0,33,47.9,48.3,-0.4
+3,3,Yes,"CANADIAN ARTIST","Cancon Song",WM Canada,Yes,1538,1562,-24,421,210,310,275,322,4.437,33,0,33,46.6,47.3,-0.7
+4,4,,"FOURTH ARTIST","Billboard Hit",Republic,,1342,1343,-1,363,174,281,236,288,4.015,33,0,33,40.7,40.7,-0.0
+-,5,,"NEW ENTRY ARTIST","Brand New Song",Atlantic,,500,0,500,130,70,100,90,110,1.500,25,25,25,20.0,0.0,20.0

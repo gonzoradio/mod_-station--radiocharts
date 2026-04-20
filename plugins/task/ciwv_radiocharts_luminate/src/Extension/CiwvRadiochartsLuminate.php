@@ -28,7 +28,7 @@ use Joomla\Event\SubscriberInterface;
  *
  * Luminate (formerly Soundscan / BDS) provides streaming counts through its
  * Data API.  This plugin queries the API for the weekly stream data relevant
- * to CIWV's market/format and stores it in the shared `#__ciwv_radiocharts`
+ * to CIWV's market/format and stores it in the shared `d6f25_ciwv_radiocharts`
  * table under the `luminate` source.
  *
  * Configuration (set in Joomla Task Scheduler admin):
@@ -128,16 +128,15 @@ class CiwvRadiochartsLuminate extends CMSPlugin implements DatabaseAwareInterfac
 
         foreach ($tracks as $track) {
             $ok = $helper->upsertEntry(
-                $weekDate,
-                'luminate',
-                (int) ($track['position'] ?? 0),
-                (string) ($track['artist'] ?? ''),
-                (string) ($track['title'] ?? ''),
-                (string) ($track['label'] ?? '') ?: null,
-                0,
-                (int) ($track['streams'] ?? 0),
-                isset($track['peak_position']) ? (int) $track['peak_position'] : null,
-                isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
+                weekDate:     $weekDate,
+                source:       'luminate',
+                position:     (int) ($track['position'] ?? 0),
+                artist:       (string) ($track['artist'] ?? ''),
+                title:        (string) ($track['title'] ?? ''),
+                label:        (string) ($track['label'] ?? '') ?: null,
+                streams:      (int) ($track['streams'] ?? 0),
+                peakPosition: isset($track['peak_position']) ? (int) $track['peak_position'] : null,
+                weeksOnChart: isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
             );
 
             if ($ok) {

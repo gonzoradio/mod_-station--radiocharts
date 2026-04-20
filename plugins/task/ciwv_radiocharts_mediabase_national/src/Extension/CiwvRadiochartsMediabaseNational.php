@@ -28,7 +28,7 @@ use Joomla\Event\SubscriberInterface;
  *
  * This plugin integrates with the Joomla Task Scheduler (com_scheduler) to
  * periodically pull the national radio chart from the Mediabase API and store
- * it in the `#__ciwv_radiocharts` database table.
+ * it in the `d6f25_ciwv_radiocharts` database table.
  *
  * Configuration (set in Joomla Task Scheduler admin):
  * - `api_endpoint`   – Mediabase API base URL
@@ -139,16 +139,15 @@ class CiwvRadiochartsMediabaseNational extends CMSPlugin implements DatabaseAwar
 
         foreach ($tracks as $track) {
             $ok = $helper->upsertEntry(
-                $weekDate,
-                'mediabase_national',
-                (int) ($track['position'] ?? 0),
-                (string) ($track['artist'] ?? ''),
-                (string) ($track['title'] ?? ''),
-                (string) ($track['label'] ?? '') ?: null,
-                (int) ($track['plays'] ?? 0),
-                0,
-                isset($track['peak_position']) ? (int) $track['peak_position'] : null,
-                isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
+                weekDate:     $weekDate,
+                source:       'mediabase_national',
+                position:     (int) ($track['position'] ?? 0),
+                artist:       (string) ($track['artist'] ?? ''),
+                title:        (string) ($track['title'] ?? ''),
+                label:        (string) ($track['label'] ?? '') ?: null,
+                plays:        (int) ($track['plays'] ?? 0),
+                peakPosition: isset($track['peak_position']) ? (int) $track['peak_position'] : null,
+                weeksOnChart: isset($track['weeks_on_chart']) ? (int) $track['weeks_on_chart'] : null
             );
 
             if ($ok) {
