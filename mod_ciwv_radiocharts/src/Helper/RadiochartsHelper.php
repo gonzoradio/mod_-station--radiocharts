@@ -13,7 +13,8 @@ namespace Gonzoradio\Module\CiwvRadiocharts\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-use Joomla\Database\DatabaseInterface;
+use Joomla\Database\DatabaseAwareInterface;
+use Joomla\Database\DatabaseAwareTrait;
 
 /**
  * RadiochartsHelper provides database query methods for the CIWV Radiocharts module.
@@ -24,27 +25,9 @@ use Joomla\Database\DatabaseInterface;
  *
  * @since  1.0.0
  */
-class RadiochartsHelper
+class RadiochartsHelper implements DatabaseAwareInterface
 {
-    /**
-     * Database driver.
-     *
-     * @var    DatabaseInterface
-     * @since  1.0.0
-     */
-    private DatabaseInterface $db;
-
-    /**
-     * Constructor.
-     *
-     * @param   DatabaseInterface  $db  Joomla database driver.
-     *
-     * @since   1.0.0
-     */
-    public function __construct(DatabaseInterface $db)
-    {
-        $this->db = $db;
-    }
+    use DatabaseAwareTrait;
 
     /**
      * Returns the Monday of the week that is `$offset` weeks from the current week.
@@ -86,18 +69,18 @@ class RadiochartsHelper
             return [];
         }
 
-        $query = $this->db->getQuery(true)
-            ->select($this->db->quoteName(
+        $query = $this->getDatabase()->getQuery(true)
+            ->select($this->getDatabase()->quoteName(
                 ['id', 'week_date', 'source', 'position', 'artist', 'title', 'label', 'plays', 'streams', 'peak_position', 'weeks_on_chart']
             ))
-            ->from($this->db->quoteName('#__ciwv_radiocharts'))
-            ->where($this->db->quoteName('week_date') . ' = ' . $this->db->quote($weekDate))
-            ->whereIn($this->db->quoteName('source'), array_map([$this->db, 'quote'], $sources), false)
-            ->order($this->db->quoteName('source') . ' ASC, ' . $this->db->quoteName('position') . ' ASC')
+            ->from($this->getDatabase()->quoteName('#__ciwv_radiocharts'))
+            ->where($this->getDatabase()->quoteName('week_date') . ' = ' . $this->getDatabase()->quote($weekDate))
+            ->whereIn($this->getDatabase()->quoteName('source'), array_map([$this->getDatabase(), 'quote'], $sources), false)
+            ->order($this->getDatabase()->quoteName('source') . ' ASC, ' . $this->getDatabase()->quoteName('position') . ' ASC')
             ->setLimit($limit * count($sources));
 
-        $this->db->setQuery($query);
-        $rows = $this->db->loadObjectList();
+        $this->getDatabase()->setQuery($query);
+        $rows = $this->getDatabase()->loadObjectList();
 
         // Group by source and honour per-source limit.
         $grouped = [];
@@ -175,7 +158,7 @@ class RadiochartsHelper
         ?int $peakPosition = null,
         ?int $weeksOnChart = null
     ): bool {
-        $db = $this->db;
+        $db = $this->getDatabase();
 
         // Check for an existing record for this week / source / position.
         $query = $db->getQuery(true)
