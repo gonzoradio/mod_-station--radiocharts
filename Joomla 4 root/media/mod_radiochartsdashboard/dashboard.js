@@ -25,7 +25,9 @@ document.addEventListener('DOMContentLoaded', function () {
     od_market:   20
   };
 
-  // Full PD sort order for TW categories
+  // Full PD sort order for TW (This Week) category dropdown.
+  // A1/J=Jazz/AC, A2/P=Pop-AC, B/C/D=rotation tiers, GOLD=gold, PC2/PC3=CanCon,
+  // HOLD=hold, ADD=adding to rotation, Q=exiting next week, OUT=dropped.
   const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',''];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -188,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
       tw:              row.querySelector('select[name="TW[]"]')?.value ?? '',
       nw:              row.querySelector('select[name="NW[]"]')?.value ?? '',
       'Stn Rk TW':     row.cells[COL.stn_rk_tw]?.textContent.trim()  ?? '',
-      'Stn Rk LW':     row.cells[COL.stn_rk_up]?.textContent.trim()  ?? '',
+      'Stn Rk LW':     '',  // Stn Rk LW is not a visible column; written by helper.php only
       'Stn Rk UP':     row.cells[COL.stn_rk_up]?.textContent.trim()  ?? '',
       artist:          row.cells[COL.artist]?.textContent.trim()      ?? '',
       title:           row.cells[COL.title]?.textContent.trim()       ?? '',

@@ -29,10 +29,15 @@ class PlgSystemRadiocharts extends CMSPlugin
      */
     public function onAfterInitialise(): void
     {
-        // Ensure PHP errors never leak into AJAX responses served by this site.
-        // (Individual AJAX files use ob_start/ob_clean, but this is a belt-and-
-        // suspenders safeguard.)
-        if (php_sapi_name() !== 'cli') {
+        if (php_sapi_name() === 'cli') {
+            return;
+        }
+
+        $app = Factory::getApplication();
+
+        // Only suppress display_errors in production (debug off).
+        // Developers running with debug mode enabled will still see PHP notices.
+        if (!$app->get('debug', false)) {
             ini_set('display_errors', '0');
         }
     }

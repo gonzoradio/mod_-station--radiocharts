@@ -20,8 +20,8 @@ try {
         exit;
     }
     $query = $db->getQuery(true)
-        ->select('state_json')
-        ->from($db->quoteName('d6f21_radiochartsdashboard_state'))
+        ->select($db->quoteName('state_json'))
+        ->from($db->quoteName('#__radiochartsdashboard_state'))
         ->where($db->quoteName('week_start') . ' = ' . $db->quote($weekStart));
     $db->setQuery($query);
     $state = $db->loadResult();

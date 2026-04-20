@@ -45,9 +45,14 @@ try {
             }
 
             $stateJson = json_encode($data['state']);
-            $query = 'INSERT INTO `d6f21_radiochartsdashboard_state` (`week_start`, `state_json`, `meta_line`, `saved_at`)'
+            // Use '#__' prefix so Joomla replaces it with the configured DB prefix.
+            $query = 'INSERT INTO ' . $db->quoteName('#__radiochartsdashboard_state')
+                . ' (' . $db->quoteName('week_start') . ', ' . $db->quoteName('state_json') . ', ' . $db->quoteName('meta_line') . ', ' . $db->quoteName('saved_at') . ')'
                 . ' VALUES (' . $db->quote($saveWeek) . ', ' . $db->quote($stateJson) . ', ' . $db->quote($metaLine) . ', NOW())'
-                . ' ON DUPLICATE KEY UPDATE `state_json` = VALUES(`state_json`), `meta_line` = VALUES(`meta_line`), `saved_at` = NOW()';
+                . ' ON DUPLICATE KEY UPDATE '
+                . $db->quoteName('state_json') . ' = VALUES(' . $db->quoteName('state_json') . '), '
+                . $db->quoteName('meta_line')  . ' = VALUES(' . $db->quoteName('meta_line')  . '), '
+                . $db->quoteName('saved_at')   . ' = NOW()';
             $db->setQuery($query);
             $db->execute();
 

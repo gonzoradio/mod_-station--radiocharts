@@ -651,8 +651,7 @@ class ModCiwvRadiochartsHelper
             'text/plain',
             'application/csv',
             'text/comma-separated-values',
-            'application/vnd.ms-excel',   // Windows / Internet Explorer / Edge
-            'application/octet-stream',   // generic binary sent by some browsers
+            'application/vnd.ms-excel',   // Windows / Internet Explorer / Edge with Excel installed
         ];
         if ($mime !== '' && !in_array(strtolower($mime), $allowedMimes, true)) {
             return 'Error: unexpected file type ' . htmlspecialchars($mime) . '.';
