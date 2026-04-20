@@ -1,8 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 if (!defined('_JEXEC')) {
     define('_JEXEC', 1);
 }
@@ -23,11 +19,10 @@ try {
         echo json_encode([]);
         exit;
     }
-    // FIXED TABLE NAME BELOW
     $query = $db->getQuery(true)
         ->select('state_json')
-        ->from('d6f21_radiochartsdashboard_state') // <-- fix here!
-        ->where('week_start = ' . $db->quote($weekStart));
+        ->from($db->quoteName('d6f21_radiochartsdashboard_state'))
+        ->where($db->quoteName('week_start') . ' = ' . $db->quote($weekStart));
     $db->setQuery($query);
     $state = $db->loadResult();
 
@@ -39,6 +34,6 @@ try {
     exit;
 } catch (Throwable $e) {
     http_response_code(500);
-    echo json_encode(['success'=>false, 'error'=>$e->getMessage(), 'trace'=>$e->getTraceAsString()]);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     exit;
 }
