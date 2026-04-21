@@ -794,6 +794,7 @@ class ModCiwvRadiochartsHelper
                 // Use station format rank as primary Rk, AC national rank as fallback
                 $formatRk = $pl ? $getFormatRank($pl) : '';
                 $rk       = ($formatRk !== '') ? $formatRk : ($natAc['Rank_TW'] ?? '');
+                $peak     = $natAc['PK'] ?? '';
             } else {
                 // No national data – use station format comparison rank if available
                 $rk = $pl ? $getFormatRank($pl) : '';
