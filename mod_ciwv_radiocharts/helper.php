@@ -16,12 +16,12 @@ class ModCiwvRadiochartsHelper
     public static $catOptions = ['1', '2', '3', 'S', 'PSG', 'G', 'F', 'GS', 'GP', 'P', 'V', 'T', 'TG', 'SP', 'TS', 'GT'];
 
     public static $csvNames = [
-        'national_sj'      => 'NationalPlaylist_SJ',
-        'national_ac'      => 'NationalPlaylist_AC',
-        'station'          => 'StationPlaylist',
-        'streaming_market' => 'StreamingDataMarket',
-        'musicmaster'      => 'MusicMasterCSV',
-        'billboard'        => 'BillboardChart',
+        'national_sj' => 'NationalPlaylist_SJ',
+        'national_ac' => 'NationalPlaylist_AC',
+        'station'     => 'StationPlaylist',
+        'streaming'   => 'Streaming',
+        'musicmaster' => 'MusicMasterCSV',
+        'billboard'   => 'BillboardChart',
     ];
 
     // ── Normalisation / fuzzy match ──────────────────────────────────────────
@@ -353,9 +353,56 @@ class ModCiwvRadiochartsHelper
     }
 
     /**
+     * Luminate Streaming CSV (new format): 2 header rows, then one row per song.
+     *
+     * Column positions (1-indexed per data-column-definitions.md):
+     *   1:1  (index 0)  – Title
+     *   1:2  (index 1)  – Artist
+     *   1:14 (index 13) – National Streams TW
+     *   1:15 (index 14) – % Change (national)
+     *   1:18 (index 17) – Local Market Streams TW
+     *   1:19 (index 18) – % Change – Market
+     *
+     * Returns map: normalize(artist, title) => ['CANADA' => streams_tw, 'MARKET' => market_streams_tw]
+     */
+    public static function parseStreamingCsv($filename)
+    {
+        if (!is_readable($filename)) {
+            return [];
+        }
+        $fh = fopen($filename, 'r');
+        if (!$fh) {
+            return [];
+        }
+        // Skip the two header rows
+        fgetcsv($fh);
+        fgetcsv($fh);
+
+        $rows = [];
+        while (($row = fgetcsv($fh)) !== false) {
+            if (count(array_filter($row)) === 0) {
+                continue;
+            }
+            $title  = trim($row[0] ?? '');
+            $artist = trim($row[1] ?? '');
+            if ($title === '' && $artist === '') {
+                continue;
+            }
+            $canada = trim($row[13] ?? '');
+            $market = trim($row[17] ?? '');
+            $key    = self::normalize($artist, $title);
+            $rows[$key] = ['CANADA' => $canada, 'MARKET' => $market];
+        }
+        fclose($fh);
+        return $rows;
+    }
+
+    /**
      * Luminate Streaming Station CSV: one header row, then 6 rows per song
      * (Airplay Spins CW/LW, Airplay Audience CW/LW, Streams CW/LW).
      * Returns map: normalize(artist,title) => ['CANADA' => streams_this_week]
+     *
+     * @deprecated Use parseStreamingCsv() with the new Streaming CSV format instead.
      */
     public static function parseLuminateCsv($filename)
     {
@@ -413,6 +460,8 @@ class ModCiwvRadiochartsHelper
      * Luminate Streaming Market CSV: one header row, then 8 rows per song.
      * Empty Market column = Canada national; non-empty Market = local market (e.g. Vancouver, BC).
      * Returns map: normalize(artist,title) => ['CANADA' => ..., 'MARKET' => ...]
+     *
+     * @deprecated Use parseStreamingCsv() with the new Streaming CSV format instead.
      */
     public static function parseLuminateMarketCsv($filename)
     {
@@ -612,7 +661,7 @@ class ModCiwvRadiochartsHelper
         $stationFile  = self::getLatestFile($dataDir, 'station');
         $nationalSjFile = self::getLatestFile($dataDir, 'national_sj');
         $nationalAcFile = self::getLatestFile($dataDir, 'national_ac');
-        $strmMktFile  = self::getLatestFile($dataDir, 'streaming_market');
+        $strmFile     = self::getLatestFile($dataDir, 'streaming');
         $mmFile       = self::getLatestFile($dataDir, 'musicmaster');
 
         // --- Station Playlist (primary source: Spins ATD, Format Rank, song list) ---
@@ -647,8 +696,8 @@ class ModCiwvRadiochartsHelper
         // --- Music Master (TW category, WEEKS, CAT code, station Spins TW) ---
         $mmData = $mmFile ? self::parseMusicMasterCsv($mmFile) : [];
 
-        // --- Streaming data (market CSV: both CA and Vancouver) ---
-        $streamingIdx = $strmMktFile ? self::parseLuminateMarketCsv($strmMktFile) : [];
+        // --- Streaming data (new Streaming CSV: both CA national and local market) ---
+        $streamingIdx = $strmFile ? self::parseStreamingCsv($strmFile) : [];
 
         // --- Report meta ---
         $reportMeta = $stationFile ? self::getReportMeta($stationFile) : '';
