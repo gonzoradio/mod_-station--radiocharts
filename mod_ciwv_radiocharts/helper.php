@@ -144,8 +144,15 @@ class ModCiwvRadiochartsHelper
     /**
      * Music Master CSV parser.
      *
-     * Returns an array keyed by normalize(artist, title), each entry:
-     *   ['artist', 'title', 'weeks', 'tw_cat', 'cat_code', 'spins']
+     * Returns an associative array keyed by normalize(artist, title), each value:
+     *   [
+     *     'artist'   => string,  // original artist text
+     *     'title'    => string,  // original title text
+     *     'weeks'    => string,  // WKS column value
+     *     'tw_cat'   => string,  // mapped dashboard TW category (e.g. 'J', 'PC2')
+     *     'cat_code' => string,  // code/sub-category (col 5, e.g. '2', 'GT', 'S')
+     *     'spins'    => string,  // SPINS column value
+     *   ]
      *
      * The CSV has multiple sections separated by blank rows and repeating
      * "CAT.,ARTIST,TITLE,WKS,,[code],SPINS,," header rows.
@@ -589,7 +596,7 @@ class ModCiwvRadiochartsHelper
             $natSpinsTW = '';
             $natStnsOn  = '';
             $natRk      = '';
-            $natPeak    = '';
+            $natPeak    = '';   // Peak source is not yet identified; remains blank
             if ($nat) {
                 // Spins_TW key from composite header parsing
                 $natSpinsTW = $nat['Spins_TW'] ?? '';
@@ -597,13 +604,12 @@ class ModCiwvRadiochartsHelper
                 $natStnsOn  = $nat['Stations_On'] ?? '';
                 // Rank_TW = national chart position this week
                 $natRk      = $nat['Rank_TW'] ?? '';
-                // No reliable Peak source yet – leave blank
             }
 
-            // Avg Spins = #Spins TW / #Stns TW (station-level average)
+            // Avg Spins = #Spins TW / #Stns TW (rounded to nearest whole spin)
             $avgSpins = '';
-            $spinsNum = intval(str_replace(',', '', $natSpinsTW));
-            $stnsNum  = intval(str_replace(',', '', $natStnsOn));
+            $spinsNum = abs(intval(str_replace(',', '', $natSpinsTW)));
+            $stnsNum  = abs(intval(str_replace(',', '', $natStnsOn)));
             if ($spinsNum > 0 && $stnsNum > 0) {
                 $avgSpins = (string) round($spinsNum / $stnsNum);
             }
