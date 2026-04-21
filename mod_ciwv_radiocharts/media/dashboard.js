@@ -165,7 +165,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const catSel = row.querySelector('select.rc-sel-cat');
             if (twSel)  twSel.value  = stateMap[k].tw  || '';
             if (nwSel)  nwSel.value  = stateMap[k].nw  || '';
-            if (catSel) catSel.value = stateMap[k].cat || '';
+            // Only override the PHP-pre-selected CAT (from MusicMaster CSV) when
+            // the saved value is explicitly non-empty; avoids clearing it with
+            // empty values from state saved before the CAT field was introduced.
+            if (catSel && stateMap[k].cat) catSel.value = stateMap[k].cat;
           }
         });
         initialSort();

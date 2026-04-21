@@ -6,7 +6,7 @@ use Joomla\CMS\Uri\Uri;
 
 $doc = Factory::getDocument();
 $doc->addStyleSheet(Uri::root() . 'modules/mod_ciwv_radiocharts/media/style.css');
-$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=2');
+$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=3');
 
 $twCats  = ModCiwvRadiochartsHelper::$twCategories;
 $nwCats  = ModCiwvRadiochartsHelper::$nwCategories;
