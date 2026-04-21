@@ -105,7 +105,8 @@ document.addEventListener('DOMContentLoaded', function () {
         artist: COL.artist, title: COL.title, weeks: COL.weeks,
         spins_atd: COL.spins_atd, streams_ca: COL.streams_ca, streams_van: COL.streams_van,
         spins_tw: COL.spins_tw, stns_tw: COL.stns_tw, avg_spins: COL.avg_spins,
-        rk: COL.rk
+        mb_cht: COL.mb_cht, rk: COL.rk, peak: COL.peak,
+        bb_sj: COL.bb_sj, freq_atd: COL.freq_atd, imp_atd: COL.imp_atd
       };
       const colIdx = colMap[sortBy];
       if (colIdx !== undefined) {
