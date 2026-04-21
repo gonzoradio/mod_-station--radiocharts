@@ -101,24 +101,48 @@ document.addEventListener('DOMContentLoaded', function () {
         return (iA === -1 ? TW_ORDER.length : iA) - (iB === -1 ? TW_ORDER.length : iB);
       });
     } else {
-      const colMap = {
-        artist: COL.artist, title: COL.title, weeks: COL.weeks,
+      // Text columns sort ascending by default; numeric columns sort descending (highest first).
+      // Empty cells always sink to the bottom regardless of the Reverse checkbox.
+      const textCols = { artist: COL.artist, title: COL.title };
+      const numCols  = {
+        weeks: COL.weeks,
         spins_atd: COL.spins_atd, streams_ca: COL.streams_ca, streams_van: COL.streams_van,
         spins_tw: COL.spins_tw, stns_tw: COL.stns_tw, avg_spins: COL.avg_spins,
-        rk: COL.rk
+        mb_cht: COL.mb_cht, rk: COL.rk, peak: COL.peak,
+        bb_sj: COL.bb_sj, freq_atd: COL.freq_atd, imp_atd: COL.imp_atd
       };
-      const colIdx = colMap[sortBy];
+      const isNumeric = sortBy in numCols;
+      const colIdx    = isNumeric ? numCols[sortBy] : textCols[sortBy];
       if (colIdx !== undefined) {
-        rows.sort((a, b) => {
-          const cA = (a.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '');
-          const cB = (b.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '');
-          if (cA === '' && cB !== '') return 1;
-          if (cB === '' && cA !== '') return -1;
-          if (!isNaN(cA) && !isNaN(cB) && cA !== '' && cB !== '') {
-            return parseFloat(cA) - parseFloat(cB);
-          }
-          return cA.localeCompare(cB, undefined, { numeric: true, sensitivity: 'base' });
+        // Separate rows with data from rows with empty cells
+        const filled = [], empty = [];
+        rows.forEach(r => {
+          const v = (r.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '');
+          (v === '' ? empty : filled).push(r);
         });
+        const reverse = reverseCheck && reverseCheck.checked;
+        if (isNumeric) {
+          // Descending by default (highest first); Reverse → ascending
+          filled.sort((a, b) => {
+            const nA = parseFloat((a.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '')) || 0;
+            const nB = parseFloat((b.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '')) || 0;
+            return reverse ? nA - nB : nB - nA;
+          });
+        } else {
+          // Ascending by default; Reverse → descending
+          filled.sort((a, b) => {
+            const cA = a.cells[colIdx]?.textContent.trim() ?? '';
+            const cB = b.cells[colIdx]?.textContent.trim() ?? '';
+            const cmp = cA.localeCompare(cB, undefined, { numeric: true, sensitivity: 'base' });
+            return reverse ? -cmp : cmp;
+          });
+        }
+        // Rebuild rows: sorted filled rows first, then empties always last
+        rows.length = 0;
+        filled.forEach(r => rows.push(r));
+        empty.forEach(r => rows.push(r));
+        rows.forEach(r => tbody.appendChild(r));
+        return; // skip the generic reverse+append below
       }
     }
 

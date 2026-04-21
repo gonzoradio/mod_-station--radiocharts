@@ -89,7 +89,12 @@ $catOptionsMap = $buildOptionsMap($catOpts);
       <option value="spins_tw">#Spins TW</option>
       <option value="stns_tw">#Stns TW</option>
       <option value="avg_spins">Avg Spins</option>
+      <option value="mb_cht">MB Cht</option>
       <option value="rk">Rk</option>
+      <option value="peak">Peak</option>
+      <option value="bb_sj">BB SJ Chart</option>
+      <option value="freq_atd">Freq/Listen ATD</option>
+      <option value="imp_atd">Impres ATD</option>
     </select>
   </label>
   <label><input type="checkbox" id="rc-reverse-sort"> Reverse</label>
