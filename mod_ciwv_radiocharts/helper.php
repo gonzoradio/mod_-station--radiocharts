@@ -3,12 +3,17 @@ defined('_JEXEC') or die;
 
 class ModCiwvRadiochartsHelper
 {
-    // Full PD category list, in sort order
+    // Full PD category list, in display/sort order
     public static $twCategories = ['A1', 'J', 'A2', 'P', 'B', 'C', 'D', 'GOLD', 'PC2', 'PC3', 'HOLD', 'ADD', 'Q', 'OUT'];
 
     // "Next week" categories include question-mark variants
-    public static $nwCategories = ['A1', 'J', 'A2', 'P', 'B', 'C', 'D', 'GOLD', 'PC2', 'PC3', 'HOLD', 'ADD', 'Q', 'OUT',
-                                   'A1?', 'J?', 'A2?', 'P?', 'B?', 'C?', 'D?', 'GOLD?', 'PC2?', 'PC3?', 'Q?', 'OUT?'];
+    public static $nwCategories = [
+        'A1', 'J', 'A2', 'P', 'B', 'C', 'D', 'GOLD', 'PC2', 'PC3', 'HOLD', 'ADD', 'Q', 'OUT',
+        'A1?', 'J?', 'A2?', 'P?', 'B?', 'C?', 'D?', 'GOLD?', 'PC2?', 'PC3?', 'Q?', 'OUT?',
+    ];
+
+    // CAT/CODE options (Music Master sub-category codes)
+    public static $catOptions = ['1', '2', '3', 'S', 'PSG', 'G', 'F', 'GS', 'GP', 'P', 'V', 'T', 'TG', 'SP', 'TS', 'GT'];
 
     public static $csvNames = [
         'national'          => 'NationalPlaylist',
@@ -128,6 +133,8 @@ class ModCiwvRadiochartsHelper
 
     /**
      * National Playlist CSV: same composite-header structure as Station Playlist.
+     * Returns keyed rows; useful fields:
+     *   Rank_TW, Artist, Title, Cancon, Spins_TW, Stations_On, Avg. Station Rotations_TW
      */
     public static function parseNationalCsv($filename)
     {
@@ -135,9 +142,98 @@ class ModCiwvRadiochartsHelper
     }
 
     /**
+     * Music Master CSV parser.
+     *
+     * Returns an array keyed by normalize(artist, title), each entry:
+     *   ['artist', 'title', 'weeks', 'tw_cat', 'cat_code', 'spins']
+     *
+     * The CSV has multiple sections separated by blank rows and repeating
+     * "CAT.,ARTIST,TITLE,WKS,,[code],SPINS,," header rows.
+     * Song rows: col0=category, col1=artist, col2=title, col3=weeks, col4=code, col5=spins.
+     */
+    public static function parseMusicMasterCsv($filename)
+    {
+        if (!is_readable($filename)) {
+            return [];
+        }
+        $result = [];
+        $fh     = fopen($filename, 'r');
+        if (!$fh) {
+            return [];
+        }
+        // Skip first row (metadata, e.g. "PLAYLIST WEEK OF …")
+        fgetcsv($fh);
+        while (($row = fgetcsv($fh)) !== false) {
+            // Skip empty rows
+            if (count(array_filter(array_map('trim', $row))) === 0) {
+                continue;
+            }
+            $col0 = trim($row[0] ?? '');
+            $col1 = trim($row[1] ?? '');
+            $col2 = trim($row[2] ?? '');
+            // Skip header rows (CAT.,ARTIST,TITLE…) and section labels
+            if (strcasecmp($col0, 'CAT.') === 0) {
+                continue;
+            }
+            // Skip pure section label rows (artist and title are both empty)
+            if ($col1 === '' && $col2 === '') {
+                continue;
+            }
+            $artist   = $col1;
+            $title    = $col2;
+            $weeks    = trim($row[3] ?? '');
+            $catCode  = trim($row[4] ?? '');
+            $spins    = trim($row[5] ?? '');
+            // Map MusicMaster category code to module TW category
+            $twCat = self::normaliseMmCategory($col0);
+            $key   = self::normalize($artist, $title);
+            // Only add if artist and title are non-empty
+            if ($artist !== '' && $title !== '') {
+                $result[$key] = [
+                    'artist'   => $artist,
+                    'title'    => $title,
+                    'weeks'    => $weeks,
+                    'tw_cat'   => $twCat,
+                    'cat_code' => $catCode,
+                    'spins'    => $spins,
+                ];
+            }
+        }
+        fclose($fh);
+        return $result;
+    }
+
+    /**
+     * Map a Music Master category abbreviation to the dashboard TW category.
+     * PC is mapped to PC2 by default; the user can override in the dashboard.
+     */
+    private static function normaliseMmCategory($mmCat)
+    {
+        $mm = strtoupper(trim($mmCat));
+        $map = [
+            'J'    => 'J',
+            'A1'   => 'A1',
+            'A2'   => 'A2',
+            'P'    => 'P',
+            'B'    => 'B',
+            'C'    => 'C',
+            'D'    => 'D',
+            'GOLD' => 'GOLD',
+            'PC'   => 'PC2',
+            'PC2'  => 'PC2',
+            'PC3'  => 'PC3',
+            'HOLD' => 'HOLD',
+            'ADD'  => 'ADD',
+            'Q'    => 'Q',
+            'OUT'  => 'OUT',
+        ];
+        return $map[$mm] ?? '';
+    }
+
+    /**
      * Luminate Streaming Station CSV: one header row, then 6 rows per song
-     * (3 Activity types × 2 weeks).  Returns map:
-     *   normalize(artist,title) => ['CANADA' => streams_this_week]
+     * (Airplay Spins CW/LW, Airplay Audience CW/LW, Streams CW/LW).
+     * Returns map: normalize(artist,title) => ['CANADA' => streams_this_week]
      */
     public static function parseLuminateCsv($filename)
     {
@@ -151,7 +247,7 @@ class ModCiwvRadiochartsHelper
                 fclose($fh);
                 return [];
             }
-            $headers = array_map('trim', $headers);
+            $headers  = array_map('trim', $headers);
             $idxAct   = array_search('Activity', $headers);
             $idxWeek  = array_search('Week', $headers);
             $idxQty   = array_search('Quantity', $headers);
@@ -161,7 +257,6 @@ class ModCiwvRadiochartsHelper
                 fclose($fh);
                 return [];
             }
-            // Collect all rows grouped by normalize key
             $byKey = [];
             while (($row = fgetcsv($fh)) !== false) {
                 if (count(array_filter($row)) === 0) {
@@ -174,12 +269,9 @@ class ModCiwvRadiochartsHelper
                     'activity' => $idxAct !== false ? ($row[$idxAct] ?? '') : '',
                     'week'     => $idxWeek !== false ? intval($row[$idxWeek] ?? 0) : 0,
                     'qty'      => $idxQty !== false ? ($row[$idxQty] ?? '') : '',
-                    'artist'   => $artist,
-                    'title'    => $title,
                 ];
             }
             fclose($fh);
-            // For each key, find latest-week Streams quantity
             foreach ($byKey as $key => $entries) {
                 $latestWeek   = -1;
                 $latestStreams = '';
@@ -197,7 +289,7 @@ class ModCiwvRadiochartsHelper
 
     /**
      * Luminate Streaming Market CSV: one header row, then 8 rows per song.
-     * Market column distinguishes Canada-national vs Vancouver market rows.
+     * Empty Market column = Canada national; non-empty Market = local market (e.g. Vancouver, BC).
      * Returns map: normalize(artist,title) => ['CANADA' => ..., 'MARKET' => ...]
      */
     public static function parseLuminateMarketCsv($filename)
@@ -228,23 +320,21 @@ class ModCiwvRadiochartsHelper
                 if (count(array_filter($row)) === 0) {
                     continue;
                 }
-                $artist  = $row[$idxArt] ?? '';
-                $title   = $row[$idxTit] ?? '';
-                $key     = self::normalize($artist, $title);
-                $market  = $idxMkt !== false ? trim($row[$idxMkt] ?? '') : '';
+                $artist = $row[$idxArt] ?? '';
+                $title  = $row[$idxTit] ?? '';
+                $key    = self::normalize($artist, $title);
+                $market = $idxMkt !== false ? trim($row[$idxMkt] ?? '') : '';
                 $byKey[$key][] = [
                     'activity' => $idxAct !== false ? trim($row[$idxAct] ?? '') : '',
                     'week'     => $idxWeek !== false ? intval($row[$idxWeek] ?? 0) : 0,
                     'qty'      => $idxQty !== false ? ($row[$idxQty] ?? '') : '',
                     'market'   => $market,
-                    'artist'   => $artist,
-                    'title'    => $title,
                 ];
             }
             fclose($fh);
             foreach ($byKey as $key => $entries) {
-                $latestCanWeek   = -1; $latestCanada = '';
-                $latestMktWeek   = -1; $latestMarket = '';
+                $latestCanWeek = -1; $latestCanada = '';
+                $latestMktWeek = -1; $latestMarket = '';
                 foreach ($entries as $e) {
                     if (strcasecmp($e['activity'], 'Streams') !== 0) {
                         continue;
@@ -378,6 +468,11 @@ class ModCiwvRadiochartsHelper
     /**
      * Build the combined dashboard rows from whichever CSVs are available.
      *
+     * Column set matches data/final-output-example.csv:
+     *   TW, NW, Artist, Title, WEEKS, CAT, Spins ATD,
+     *   #Streams CA, #Streams Van, #Spins TW, #Stns TW, Avg Spins,
+     *   MB Cht, Rk, Peak, BB SJ Chart, Freq/Listen ATD, Impres ATD
+     *
      * @param  string $dataDir  Absolute path to the data directory.
      * @return array  ['meta' => [...], 'rows' => [...]]
      */
@@ -385,61 +480,30 @@ class ModCiwvRadiochartsHelper
     {
         $stationFile   = self::getLatestFile($dataDir, 'station');
         $nationalFile  = self::getLatestFile($dataDir, 'national');
-        $strmStaFile   = self::getLatestFile($dataDir, 'streaming_station');
         $strmMktFile   = self::getLatestFile($dataDir, 'streaming_market');
+        $strmStaFile   = self::getLatestFile($dataDir, 'streaming_station');
+        $mmFile        = self::getLatestFile($dataDir, 'musicmaster');
 
-        // --- Station Playlist (primary source) ---
+        // --- Station Playlist (primary source: Spins ATD, Format Rank, song list) ---
         $playlist = $stationFile ? self::parseStationPlaylistCsv($stationFile) : [];
 
-        // --- National chart (for Rank, Peak, national spins delta) ---
-        $nationalRows = [];
+        // --- National Playlist (national spins, station count, national rank) ---
+        $nationalRows = $nationalFile ? self::parseNationalCsv($nationalFile) : [];
         $nationalIdx  = [];
-        $nationalColIdx = [];
-        if ($nationalFile && is_readable($nationalFile)) {
-            $handle = fopen($nationalFile, 'r');
-            if ($handle) {
-                // Scan for the header row that contains Rank and Artist columns
-                while (($row = fgetcsv($handle)) !== false) {
-                    $lookup = [];
-                    foreach ($row as $i => $cell) {
-                        $cellNorm = strtolower(trim(str_replace(['"', "'"], '', $cell)));
-                        if (($cellNorm === 'pk' || $cellNorm === 'peak') && !isset($lookup['Peak'])) {
-                            $lookup['Peak'] = $i;
-                        }
-                        if ($cellNorm === 'tw' && !isset($lookup['Rank'])) {
-                            $lookup['Rank'] = $i;
-                        }
-                        if ($cellNorm === 'artist' && !isset($lookup['Artist'])) {
-                            $lookup['Artist'] = $i;
-                        }
-                        if ($cellNorm === 'title' && !isset($lookup['Title'])) {
-                            $lookup['Title'] = $i;
-                        }
-                        if ($cellNorm === '+/-' && !isset($lookup['+/-'])) {
-                            $lookup['+/-'] = $i;
-                        }
-                        if (stripos($cellNorm, 'avg. station rotations') !== false && !isset($lookup['Avg. Station Rotations'])) {
-                            $lookup['Avg. Station Rotations'] = $i;
-                        }
-                    }
-                    if (isset($lookup['Rank'], $lookup['Artist'], $lookup['Title'])) {
-                        $nationalColIdx = $lookup;
-                        break;
-                    }
-                }
-                if ($nationalColIdx) {
-                    while (($row = fgetcsv($handle)) !== false) {
-                        $artist = $row[$nationalColIdx['Artist']] ?? '';
-                        $title  = $row[$nationalColIdx['Title']] ?? '';
-                        $key    = self::normalize($artist, $title);
-                        $nationalIdx[$key] = $row;
-                    }
-                }
-                fclose($handle);
+        foreach ($nationalRows as $nr) {
+            $artist = $nr['Artist'] ?? '';
+            $title  = $nr['Title'] ?? '';
+            if ($artist === '' && $title === '') {
+                continue;
             }
+            $key              = self::normalize($artist, $title);
+            $nationalIdx[$key] = $nr;
         }
 
-        // --- Streaming data (prefer market CSV if available, fall back to station CSV) ---
+        // --- Music Master (TW category, WEEKS, CAT code) ---
+        $mmData = $mmFile ? self::parseMusicMasterCsv($mmFile) : [];
+
+        // --- Streaming data (prefer market CSV for both CA and Vancouver) ---
         $streamingIdx = [];
         if ($strmMktFile) {
             $streamingIdx = self::parseLuminateMarketCsv($strmMktFile);
@@ -450,13 +514,12 @@ class ModCiwvRadiochartsHelper
         // --- Report meta ---
         $reportMeta = $stationFile ? self::getReportMeta($stationFile) : '';
 
-        // Helper: look up streaming data for an artist/title pair
+        // Helper: fuzzy-lookup streaming data by artist/title
         $findStreaming = function ($artist, $title) use ($streamingIdx) {
             $key = self::normalize($artist, $title);
             if (isset($streamingIdx[$key])) {
                 return $streamingIdx[$key];
             }
-            // Fallback: fuzzy iterate
             foreach ($streamingIdx as $sKey => $sVal) {
                 [$sa, $st] = explode('|', $sKey . '|', 2);
                 if (self::artistsMatch($artist, $sa) && self::titlesMatch($title, $st)) {
@@ -466,17 +529,37 @@ class ModCiwvRadiochartsHelper
             return [];
         };
 
-        // Helper: search playlist row for the first key containing "Share(%)"
-        $getMarketShr = function ($pl) {
-            foreach ($pl as $k => $v) {
-                if (stripos($k, 'Share(%)') !== false) {
-                    return $v;
+        // Helper: fuzzy-lookup MusicMaster data by artist/title
+        $findMM = function ($artist, $title) use ($mmData) {
+            $key = self::normalize($artist, $title);
+            if (isset($mmData[$key])) {
+                return $mmData[$key];
+            }
+            foreach ($mmData as $mKey => $mVal) {
+                if (self::artistsMatch($artist, $mVal['artist']) && self::titlesMatch($title, $mVal['title'])) {
+                    return $mVal;
                 }
             }
-            return '';
+            return null;
         };
 
-        // Helper: search playlist row for a key containing "Historical Data Since" + sub
+        // Helper: fuzzy-lookup national data by artist/title
+        $findNational = function ($artist, $title) use ($nationalIdx) {
+            $key = self::normalize($artist, $title);
+            if (isset($nationalIdx[$key])) {
+                return $nationalIdx[$key];
+            }
+            foreach ($nationalIdx as $nKey => $nVal) {
+                $nArtist = $nVal['Artist'] ?? '';
+                $nTitle  = $nVal['Title'] ?? '';
+                if (self::artistsMatch($artist, $nArtist) && self::titlesMatch($title, $nTitle)) {
+                    return $nVal;
+                }
+            }
+            return null;
+        };
+
+        // Helper: search station-playlist row for a key containing "Historical Data Since" + sub
         $getHistorical = function ($pl, $sub) {
             foreach ($pl as $k => $v) {
                 if (stripos($k, 'Historical Data Since') !== false && stripos($k, $sub) !== false) {
@@ -486,134 +569,123 @@ class ModCiwvRadiochartsHelper
             return '';
         };
 
+        // Helper: search station-playlist row for the Format Comparison Rank key
+        $getFormatRank = function ($pl) {
+            foreach ($pl as $k => $v) {
+                if (stripos($k, 'Format Comparison') !== false && stripos($k, 'Rank') !== false) {
+                    return $v;
+                }
+            }
+            return '';
+        };
+
+        // Helper: build a single output row
+        $buildRow = function ($artist, $title, $pl, $mm, $nat, $s) use ($getHistorical, $getFormatRank) {
+            // Streaming
+            $streamsCa  = $s['CANADA'] ?? '';
+            $streamsVan = $s['MARKET'] ?? '';
+
+            // National data
+            $natSpinsTW = '';
+            $natStnsOn  = '';
+            $natRk      = '';
+            $natPeak    = '';
+            if ($nat) {
+                // Spins_TW key from composite header parsing
+                $natSpinsTW = $nat['Spins_TW'] ?? '';
+                // Stations_On from composite header
+                $natStnsOn  = $nat['Stations_On'] ?? '';
+                // Rank_TW = national chart position this week
+                $natRk      = $nat['Rank_TW'] ?? '';
+                // No reliable Peak source yet – leave blank
+            }
+
+            // Avg Spins = #Spins TW / #Stns TW (station-level average)
+            $avgSpins = '';
+            $spinsNum = intval(str_replace(',', '', $natSpinsTW));
+            $stnsNum  = intval(str_replace(',', '', $natStnsOn));
+            if ($spinsNum > 0 && $stnsNum > 0) {
+                $avgSpins = (string) round($spinsNum / $stnsNum);
+            }
+
+            // Music Master
+            $weeks   = $mm ? $mm['weeks']    : '';
+            $twCat   = $mm ? $mm['tw_cat']   : '';
+            $catCode = $mm ? $mm['cat_code'] : '';
+
+            // Spins ATD = station's all-time spins from Station Playlist "Hist Spins"
+            $spinsAtd = $pl ? $getHistorical($pl, 'Hist Spins') : '';
+
+            // Format Comparison Rank (station's format chart position)
+            $formatRk = $pl ? $getFormatRank($pl) : '';
+            // Use national rank if format rank is unavailable
+            $rk = ($formatRk !== '') ? $formatRk : $natRk;
+
+            return [
+                'TW'             => $twCat,
+                'NW'             => '',
+                'Artist'         => $artist,
+                'Title'          => $title,
+                'WEEKS'          => $weeks,
+                'CAT'            => $catCode,
+                'Spins ATD'      => $spinsAtd,
+                '#Streams CA'    => $streamsCa,
+                '#Streams Van'   => $streamsVan,
+                '#Spins TW'      => $natSpinsTW,
+                '#Stns TW'       => $natStnsOn,
+                'Avg Spins'      => $avgSpins,
+                'MB Cht'         => '',
+                'Rk'             => $rk,
+                'Peak'           => $natPeak,
+                'BB SJ Chart'    => '',
+                'Freq/Listen ATD'=> '',
+                'Impres ATD'     => '',
+            ];
+        };
+
         $final        = [];
         $localKeysSet = [];
 
+        // --- Primary: Station Playlist songs ---
         foreach ($playlist as $pl) {
             $artist = $pl['Artist'] ?? '';
             $title  = $pl['Title'] ?? '';
             if ($artist === '' && $title === '') {
                 continue;
             }
-            $cancon          = $pl['Cancon'] ?? '';
-            $year            = $pl['Year'] ?? '';
-            $station_rk_lw   = $pl['Station Rank_LW'] ?? '';
-            $station_rk_tw   = $pl['Station Rank_TW'] ?? '';
-            $lw              = intval($station_rk_lw);
-            $tw              = intval($station_rk_tw);
-            $spins_tw_raw    = intval($pl['Spins_TW'] ?? 0);
-            $spins_ovn       = intval($pl['Dayparts_OVN'] ?? 0);
-            $spins_tw        = $spins_tw_raw - $spins_ovn;   // overnight-adjusted
-            $daypart_amd     = $pl['Dayparts_AMD'] ?? '';
-            $daypart_mid     = $pl['Dayparts_MID'] ?? '';
-            $daypart_pmd     = $pl['Dayparts_PMD'] ?? '';
-            $daypart_eve     = $pl['Dayparts_EVE'] ?? '';
-            $market_shr      = $getMarketShr($pl);
-            $first_played    = $getHistorical($pl, 'First Played');
-            $atd             = $getHistorical($pl, 'Hist Spins');
-
-            $key = self::normalize($artist, $title);
+            $key              = self::normalize($artist, $title);
             $localKeysSet[$key] = true;
 
-            // National chart lookup
-            $r        = $nationalIdx[$key] ?? null;
-            $natRank  = ($r && isset($nationalColIdx['Rank'])) ? ($r[$nationalColIdx['Rank']] ?? '') : '';
-            $natPeak  = ($r && isset($nationalColIdx['Peak'])) ? ($r[$nationalColIdx['Peak']] ?? '') : '';
-            $natDelta = ($r && isset($nationalColIdx['+/-'])) ? intval($r[$nationalColIdx['+/-']] ?? 0) : null;
+            $mm  = $findMM($artist, $title);
+            $nat = $findNational($artist, $title);
+            $s   = $findStreaming($artist, $title);
 
-            // Stn Rk UP: movement arrow + national spins threshold labels
-            $labels = [];
-            if ($lw > 0 && $tw > 0 && $tw < $lw) {
-                $labels[] = '▲';
-            }
-            if ($natDelta !== null) {
-                if ($natDelta >= 200) {
-                    $labels[] = '+200ntl';
-                } elseif ($natDelta >= 150) {
-                    $labels[] = '+150ntl';
-                } elseif ($natDelta >= 100) {
-                    $labels[] = '+100ntl';
-                } elseif ($natDelta >= 30) {
-                    $labels[] = '+30ntl';
-                } elseif ($natDelta <= -200) {
-                    $labels[] = '-200ntl';
-                } elseif ($natDelta <= -150) {
-                    $labels[] = '-150ntl';
-                } elseif ($natDelta <= -100) {
-                    $labels[] = '-100ntl';
-                } elseif ($natDelta <= -30) {
-                    $labels[] = '-30ntl';
-                }
-            }
-            $stn_rk_up = implode(' ', $labels);
-
-            // Streaming
-            $s       = $findStreaming($artist, $title);
-            $canada  = $s['CANADA'] ?? '';
-            $market  = $s['MARKET'] ?? '';
-
-            $final[] = [
-                'TW'             => '',
-                'NW'             => '',
-                'Artist'         => $artist,
-                'Title'          => $title,
-                'CanCon'         => $cancon,
-                'Year'           => $year,
-                'Stn Rk TW'      => $tw,
-                'Stn Rk LW'      => $lw,
-                'Stn Rk UP'      => $stn_rk_up,
-                'Spins TW'       => $spins_tw,
-                '+/-'            => '',
-                'AMD'            => $daypart_amd,
-                'MID'            => $daypart_mid,
-                'PMD'            => $daypart_pmd,
-                'EVE'            => $daypart_eve,
-                'Market Shr (%)' => $market_shr,
-                'First Played'   => $first_played,
-                'ATD'            => $atd,
-                'Rank'           => $natRank,
-                'Peak'           => $natPeak,
-                'CANADA'         => $canada,
-                'MARKET'         => $market,
-            ];
+            $final[] = $buildRow($artist, $title, $pl, $mm, $nat, $s);
         }
 
-        // Append national-chart-only songs not in the station playlist
-        foreach ($nationalIdx as $key => $r) {
+        // --- Secondary: MusicMaster-only songs not in Station Playlist ---
+        foreach ($mmData as $key => $mm) {
             if (isset($localKeysSet[$key])) {
                 continue;
             }
-            $artist  = $r[$nationalColIdx['Artist']] ?? '';
-            $title   = $r[$nationalColIdx['Title']] ?? '';
-            $natRank = $r[$nationalColIdx['Rank']] ?? '';
-            $natPeak = isset($nationalColIdx['Peak']) ? ($r[$nationalColIdx['Peak']] ?? '') : '';
-            $natDelta = isset($nationalColIdx['+/-']) ? ($r[$nationalColIdx['+/-']] ?? '') : '';
-            $s       = $findStreaming($artist, $title);
+            $artist          = $mm['artist'];
+            $title           = $mm['title'];
+            $localKeysSet[$key] = true;
+            $nat = $findNational($artist, $title);
+            $s   = $findStreaming($artist, $title);
+            $final[] = $buildRow($artist, $title, null, $mm, $nat, $s);
+        }
 
-            $final[] = [
-                'TW'             => '',
-                'NW'             => '',
-                'Artist'         => $artist,
-                'Title'          => $title,
-                'CanCon'         => '',
-                'Year'           => '',
-                'Stn Rk TW'      => '',
-                'Stn Rk LW'      => '',
-                'Stn Rk UP'      => '',           // no station rank movement for national-only
-                'Spins TW'       => '',
-                '+/-'            => $natDelta,
-                'AMD'            => '',
-                'MID'            => '',
-                'PMD'            => '',
-                'EVE'            => '',
-                'Market Shr (%)' => '',
-                'First Played'   => '',
-                'ATD'            => '',
-                'Rank'           => $natRank,
-                'Peak'           => $natPeak,
-                'CANADA'         => $s['CANADA'] ?? '',
-                'MARKET'         => $s['MARKET'] ?? '',
-            ];
+        // --- Tertiary: National-only songs (not in station playlist or MusicMaster) ---
+        foreach ($nationalIdx as $key => $nat) {
+            if (isset($localKeysSet[$key])) {
+                continue;
+            }
+            $artist          = $nat['Artist'] ?? '';
+            $title           = $nat['Title'] ?? '';
+            $localKeysSet[$key] = true;
+            $s = $findStreaming($artist, $title);
+            $final[] = $buildRow($artist, $title, null, null, $nat, $s);
         }
 
         return [
@@ -643,22 +715,20 @@ class ModCiwvRadiochartsHelper
         if ($ext !== 'csv') {
             return 'Error: only CSV files are accepted.';
         }
-        // MIME type check – accept all common CSV MIME types, including what
-        // Windows browsers send when Excel is the default .csv handler.
-        $mime = $file['type'] ?? '';
+        // Accept common CSV MIME types including what Windows/Excel sends
+        $mime         = $file['type'] ?? '';
         $allowedMimes = [
             'text/csv',
             'text/plain',
             'application/csv',
             'text/comma-separated-values',
-            'application/vnd.ms-excel',   // Windows / Internet Explorer / Edge with Excel installed
+            'application/vnd.ms-excel',
         ];
         if ($mime !== '' && !in_array(strtolower($mime), $allowedMimes, true)) {
             return 'Error: unexpected file type ' . htmlspecialchars($mime) . '.';
         }
         if (!is_dir($dataDir)) {
             mkdir($dataDir, 0775, true);
-            // Protect the folder from direct browsing
             file_put_contents($dataDir . '/index.html', '<html><body></body></html>');
         }
         $prefix = self::$csvNames[$type];

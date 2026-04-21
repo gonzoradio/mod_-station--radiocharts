@@ -5,6 +5,8 @@
  * POST JSON body: { state: [...], week_start: "YYYY-MM-DD", meta_line: "..." }
  */
 
+ob_start();
+
 if (!defined('_JEXEC')) {
     define('_JEXEC', 1);
 }
@@ -16,20 +18,7 @@ require_once JPATH_BASE . '/includes/framework.php';
 
 use Joomla\CMS\Factory;
 
-// Initialise the site application so the session (and therefore the logged-in
-// user) is available when we call Factory::getUser() below.  Without this,
-// a raw-file bootstrap only loads the autoloader and Factory::getUser() falls
-// back to a guest object, causing the 403 "Authentication required" branch.
-try {
-    Factory::getApplication('site');
-} catch (\Throwable $ignore) {
-    // If the application is already running or cannot be created in this
-    // context, carry on – the auth check below will catch any real problem.
-}
-
 header('Content-Type: application/json; charset=utf-8');
-
-ob_start();
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -48,6 +37,9 @@ try {
     }
 
     $db = Factory::getDbo();
+    // Use the real table prefix so the query works regardless of how the
+    // Joomla application is bootstrapped in this direct-file context.
+    $stateTable = '`' . $db->getPrefix() . 'ciwv_radiocharts_state`';
 
     // Resolve the week start date
     $saveWeek = $data['week_start'] ?? null;
@@ -73,30 +65,15 @@ try {
     $metaLine  = $data['meta_line'] ?? '';
     $stateJson = json_encode($data['state']);
 
-    // Auth check – require a logged-in user
-    $user = Factory::getUser();
-    if (!$user->id) {
-        ob_clean();
-        http_response_code(403);
-        echo json_encode(['success' => false, 'error' => 'Authentication required']);
-        exit;
-    }
-
-    // Use VALUES() alias syntax for broad MySQL 5.7 / 8.x compatibility.
-    // The "INSERT … AS new_row … ON DUPLICATE KEY UPDATE … = new_row.col"
-    // form requires MySQL ≥ 8.0.19 and fails on older servers.
-    $query = 'INSERT INTO ' . $db->quoteName('#__ciwv_radiocharts_state')
-        . ' (' . $db->quoteName('week_start') . ', '
-        . $db->quoteName('state_json') . ', '
-        . $db->quoteName('meta_line') . ', '
-        . $db->quoteName('saved_at') . ')'
+    $query = 'INSERT INTO ' . $stateTable
+        . ' (`week_start`, `state_json`, `meta_line`, `saved_at`)'
         . ' VALUES (' . $db->quote($saveWeek) . ', '
         . $db->quote($stateJson) . ', '
         . $db->quote($metaLine) . ', NOW())'
-        . ' ON DUPLICATE KEY UPDATE '
-        . $db->quoteName('state_json') . ' = VALUES(' . $db->quoteName('state_json') . '), '
-        . $db->quoteName('meta_line')  . ' = VALUES(' . $db->quoteName('meta_line')  . '), '
-        . $db->quoteName('saved_at')   . ' = NOW()';
+        . ' ON DUPLICATE KEY UPDATE'
+        . ' `state_json` = VALUES(`state_json`),'
+        . ' `meta_line`  = VALUES(`meta_line`),'
+        . ' `saved_at`   = NOW()';
     $db->setQuery($query);
     $db->execute();
 

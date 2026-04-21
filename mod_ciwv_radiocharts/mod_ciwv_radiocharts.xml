@@ -13,6 +13,7 @@
         <folder>media</folder>
         <folder>data-examples</folder>
         <folder>sql</folder>
+        <folder>language</folder>
     </files>
     <languages>
         <language tag="en-GB">language/en-GB/mod_ciwv_radiocharts.ini</language>

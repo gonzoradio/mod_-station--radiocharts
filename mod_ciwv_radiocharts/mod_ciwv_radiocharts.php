@@ -27,14 +27,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['radiocharts_csv_fil
 }
 
 // ── DB & week-state setup ─────────────────────────────────────────────────────
-$db    = Factory::getDbo();
-$table = '#__ciwv_radiocharts_state';
+$db         = Factory::getDbo();
+// Always use the real table prefix via getPrefix() to avoid #__ substitution
+// issues in direct-file ajax contexts (per project convention).
+$stateTable = $db->getPrefix() . 'ciwv_radiocharts_state';
 
 // All saved weeks (for the week-selector dropdown)
 try {
     $query = $db->getQuery(true)
         ->select($db->qn('week_start'))
-        ->from($db->qn($table))
+        ->from($db->qn($stateTable))
         ->order($db->qn('week_start') . ' DESC');
     $db->setQuery($query);
     $allWeeks = $db->loadColumn();
@@ -47,14 +49,14 @@ $oldestWeek   = $allWeeks ? min($allWeeks) : null;
 $isFirstWeek  = ($selectedWeek !== 'current' && $selectedWeek === $oldestWeek);
 
 // Helper: load prior-week map from DB
-$getPriorWeekMap = function ($weekDate) use ($db, $table) {
+$getPriorWeekMap = function ($weekDate) use ($db, $stateTable) {
     if (!$weekDate) {
         return [];
     }
     try {
         $q = $db->getQuery(true)
             ->select($db->qn('week_start'))
-            ->from($db->qn($table))
+            ->from($db->qn($stateTable))
             ->where($db->qn('week_start') . ' < ' . $db->quote($weekDate))
             ->order($db->qn('week_start') . ' DESC')
             ->setLimit(1);
@@ -65,10 +67,10 @@ $getPriorWeekMap = function ($weekDate) use ($db, $table) {
         }
         $q2 = $db->getQuery(true)
             ->select($db->qn('state_json'))
-            ->from($db->qn($table))
+            ->from($db->qn($stateTable))
             ->where($db->qn('week_start') . ' = ' . $db->quote($priorDate));
         $db->setQuery($q2);
-        $json = $db->loadResult();
+        $json  = $db->loadResult();
         $prior = $json ? json_decode($json, true) : [];
         $map   = [];
         foreach ((array) $prior as $entry) {
@@ -84,16 +86,16 @@ $getPriorWeekMap = function ($weekDate) use ($db, $table) {
 // ── Build dashboard data ──────────────────────────────────────────────────────
 if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, true)) {
     // Build from CSVs
-    $data     = ModCiwvRadiochartsHelper::getCombinedRows($dataDir);
-    $meta     = $data['meta'];
-    $rows     = $data['rows'];
+    $data      = ModCiwvRadiochartsHelper::getCombinedRows($dataDir);
+    $meta      = $data['meta'];
+    $rows      = $data['rows'];
     $stationFile = ModCiwvRadiochartsHelper::getLatestFile($dataDir, 'station');
-    [$twStart] = $stationFile
+    [$twStart]   = $stationFile
         ? ModCiwvRadiochartsHelper::extractWeekDatesFromStationPlaylist($stationFile)
         : [null];
     $weekStart = $twStart ?: date('Y-m-d');
 
-    // Overlay TW/NW from prior week and compute +/- spins
+    // Overlay TW/NW from prior week
     $priorMap = $getPriorWeekMap($weekStart);
     foreach ($rows as &$row) {
         $key = ModCiwvRadiochartsHelper::normalize($row['Artist'] ?? '', $row['Title'] ?? '');
@@ -102,19 +104,12 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
             // Promote NW → TW if last week was ADD with a NW set
             if (($prior['tw'] ?? '') === 'ADD' && !empty($prior['nw'])) {
                 $row['TW'] = $prior['nw'];
-                $row['NW'] = '';            } else {
+                $row['NW'] = '';
+            } else {
                 if ($row['TW'] === '') {
                     $row['TW'] = $prior['tw'] ?? '';
                 }
                 $row['NW'] = '';
-            }
-            // Spins +/-
-            if (!$isFirstWeek) {
-                $spinsTW   = intval($row['Spins TW'] ?? 0);
-                $spinsPrev = intval($prior['Spins TW'] ?? 0);
-                $row['+/-'] = $spinsTW - $spinsPrev;
-            } else {
-                $row['+/-'] = 'N/A';
             }
         }
     }
@@ -124,47 +119,37 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
     try {
         $query = $db->getQuery(true)
             ->select([$db->qn('state_json'), $db->qn('meta_line')])
-            ->from($db->qn($table))
+            ->from($db->qn($stateTable))
             ->where($db->qn('week_start') . ' = ' . $db->quote($selectedWeek));
         $db->setQuery($query);
-        $result   = $db->loadAssoc();
+        $result = $db->loadAssoc();
     } catch (\Exception $e) {
         $result = null;
     }
     $dbState  = isset($result['state_json']) ? json_decode($result['state_json'], true) : [];
     $metaLine = $result['meta_line'] ?? null;
-    $priorMap = $getPriorWeekMap($selectedWeek);
 
     $rows = [];
     foreach ((array) $dbState as $entry) {
-        $key       = ModCiwvRadiochartsHelper::normalize($entry['artist'] ?? '', $entry['title'] ?? '');
-        $spinsTW   = intval($entry['Spins TW'] ?? 0);
-        $spinsPrev = isset($priorMap[$key]) ? intval($priorMap[$key]['Spins TW'] ?? 0) : null;
-        $plusminus = (!$isFirstWeek && $spinsPrev !== null && isset($priorMap[$key]))
-            ? ($spinsTW - $spinsPrev) : 'N/A';
         $rows[] = [
-            'TW'             => $entry['tw'] ?? '',
-            'NW'             => $entry['nw'] ?? '',
-            'Stn Rk TW'      => $entry['Stn Rk TW'] ?? '',
-            'Stn Rk LW'      => $entry['Stn Rk LW'] ?? '',
-            'Stn Rk UP'      => $entry['Stn Rk UP'] ?? '',
-            'Artist'         => $entry['artist'] ?? '',
-            'Title'          => $entry['title'] ?? '',
-            'CanCon'         => $entry['cancon'] ?? '',
-            'Year'           => $entry['year'] ?? '',
-            'Spins TW'       => $entry['Spins TW'] ?? '',
-            '+/-'            => $plusminus,
-            'AMD'            => $entry['AMD'] ?? '',
-            'MID'            => $entry['MID'] ?? '',
-            'PMD'            => $entry['PMD'] ?? '',
-            'EVE'            => $entry['EVE'] ?? '',
-            'Market Shr (%)' => $entry['Market Shr (%)'] ?? '',
-            'First Played'   => $entry['First Played'] ?? '',
-            'ATD'            => $entry['ATD'] ?? '',
-            'Rank'           => $entry['Rank'] ?? '',
-            'Peak'           => $entry['Peak'] ?? '',
-            'CANADA'         => $entry['CANADA'] ?? '',
-            'MARKET'         => $entry['MARKET'] ?? '',
+            'TW'             => $entry['tw']             ?? '',
+            'NW'             => $entry['nw']             ?? '',
+            'Artist'         => $entry['artist']         ?? '',
+            'Title'          => $entry['title']          ?? '',
+            'WEEKS'          => $entry['weeks']          ?? '',
+            'CAT'            => $entry['cat']            ?? '',
+            'Spins ATD'      => $entry['Spins ATD']      ?? '',
+            '#Streams CA'    => $entry['#Streams CA']    ?? '',
+            '#Streams Van'   => $entry['#Streams Van']   ?? '',
+            '#Spins TW'      => $entry['#Spins TW']      ?? '',
+            '#Stns TW'       => $entry['#Stns TW']       ?? '',
+            'Avg Spins'      => $entry['Avg Spins']      ?? '',
+            'MB Cht'         => $entry['MB Cht']         ?? '',
+            'Rk'             => $entry['Rk']             ?? '',
+            'Peak'           => $entry['Peak']           ?? '',
+            'BB SJ Chart'    => $entry['BB SJ Chart']    ?? '',
+            'Freq/Listen ATD'=> $entry['Freq/Listen ATD']?? '',
+            'Impres ATD'     => $entry['Impres ATD']     ?? '',
         ];
     }
     $meta      = ['report' => $metaLine ?: ('Saved week: ' . $selectedWeek)];

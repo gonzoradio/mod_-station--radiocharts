@@ -6,10 +6,11 @@ use Joomla\CMS\Uri\Uri;
 
 $doc = Factory::getDocument();
 $doc->addStyleSheet(Uri::root() . 'modules/mod_ciwv_radiocharts/media/style.css');
-$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=1');
+$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=2');
 
-$twCats = ModCiwvRadiochartsHelper::$twCategories;
-$nwCats = ModCiwvRadiochartsHelper::$nwCategories;
+$twCats  = ModCiwvRadiochartsHelper::$twCategories;
+$nwCats  = ModCiwvRadiochartsHelper::$nwCategories;
+$catOpts = ModCiwvRadiochartsHelper::$catOptions;
 
 // Build TW/NW <option> lists once for reuse
 $twOptions = '<option value=""></option>';
@@ -19,6 +20,11 @@ foreach ($twCats as $cat) {
 $nwOptions = '<option value=""></option>';
 foreach ($nwCats as $cat) {
     $nwOptions .= '<option value="' . htmlspecialchars($cat) . '">' . htmlspecialchars($cat) . '</option>';
+}
+// CAT/CODE dropdown options
+$catOptions = '<option value=""></option>';
+foreach ($catOpts as $opt) {
+    $catOptions .= '<option value="' . htmlspecialchars($opt) . '">' . htmlspecialchars($opt) . '</option>';
 }
 ?>
 <?php if (!empty($meta['report'])): ?>
@@ -58,20 +64,17 @@ foreach ($nwCats as $cat) {
 <div class="rc-controls">
   <label>Sort by:
     <select id="rc-sort-select">
-      <option value="tw">TW</option>
-      <option value="stn_rk_tw">Stn Rk TW</option>
+      <option value="tw">TW Cat</option>
       <option value="artist">Artist</option>
       <option value="title">Title</option>
-      <option value="year">Year</option>
-      <option value="spins_tw">Spins TW</option>
-      <option value="spins_delta">Spins +/-</option>
-      <option value="market_shr">Market Shr (%)</option>
-      <option value="first_played">First Played</option>
-      <option value="atd">ATD</option>
-      <option value="nat_rank">Nat Rank</option>
-      <option value="nat_peak">Nat Peak</option>
-      <option value="od_canada">OD-TW CANADA</option>
-      <option value="od_market">OD-TW MARKET</option>
+      <option value="weeks">WEEKS</option>
+      <option value="spins_atd">Spins ATD</option>
+      <option value="streams_ca">#Streams CA</option>
+      <option value="streams_van">#Streams Van</option>
+      <option value="spins_tw">#Spins TW</option>
+      <option value="stns_tw">#Stns TW</option>
+      <option value="avg_spins">Avg Spins</option>
+      <option value="rk">Rk</option>
     </select>
   </label>
   <label><input type="checkbox" id="rc-reverse-sort"> Reverse</label>
@@ -87,18 +90,12 @@ foreach ($nwCats as $cat) {
     </select>
   </label>
 
-  <!-- Manual row add (enabled only for saved weeks) -->
+  <!-- Manual row add -->
   <span id="rc-manual-row-add">
-    Artist: <input type="text" id="rc-manual-artist" style="width:120px;" disabled>
-    Title:  <input type="text" id="rc-manual-title"  style="width:140px;" disabled>
-    CanCon:
-    <select id="rc-manual-cancon" disabled>
-      <option value="">--</option>
-      <option value="Yes">Yes</option>
-      <option value="No">No</option>
-    </select>
-    Year: <input type="text" id="rc-manual-year" style="width:60px;" disabled>
-    <button id="rc-add-manual-row" disabled>Add Row</button>
+    Artist: <input type="text" id="rc-manual-artist" style="width:120px;">
+    Title:  <input type="text" id="rc-manual-title"  style="width:140px;">
+    Weeks:  <input type="text" id="rc-manual-weeks"  style="width:40px;">
+    <button id="rc-add-manual-row">Add Row</button>
   </span>
 </div>
 
@@ -109,64 +106,55 @@ foreach ($nwCats as $cat) {
     <table class="rc-dashboard-table">
       <thead>
         <tr>
-          <th></th><th></th>
-          <th colspan="2">Stn Rk</th>
+          <th colspan="2">Category</th>
           <th></th><th></th><th></th><th></th>
-          <th colspan="2">Spins</th>
-          <th colspan="4">Day Parts</th>
-          <th>Market</th>
-          <th colspan="2">Historical</th>
-          <th colspan="2">Format</th>
-          <th colspan="2">OD-TW</th>
+          <th>Spins</th>
+          <th colspan="2">OD Streams</th>
+          <th colspan="3">National</th>
+          <th colspan="5">Chart Info</th>
         </tr>
         <tr>
           <th>TW</th>
           <th>NW</th>
-          <th>TW</th>
-          <th>UP</th>
           <th>Artist</th>
           <th>Title</th>
-          <th>CanCon</th>
-          <th>Year</th>
-          <th>TW</th>
-          <th>+/-</th>
-          <th>AMD</th>
-          <th>MID</th>
-          <th>PMD</th>
-          <th>EVE</th>
-          <th>Shr&nbsp;(%)</th>
-          <th>First Played</th>
+          <th>WEEKS</th>
+          <th>CAT</th>
           <th>ATD</th>
-          <th>Rank</th>
+          <th>#CA</th>
+          <th>#Van</th>
+          <th>#Spins TW</th>
+          <th>#Stns TW</th>
+          <th>Avg</th>
+          <th>MB Cht</th>
+          <th>Rk</th>
           <th>Peak</th>
-          <th>CANADA</th>
-          <th>MARKET</th>
+          <th>BB SJ</th>
+          <th>Freq ATD</th>
+          <th>Imp ATD</th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($rows as $row): ?>
         <tr>
-          <td><select name="TW[]"><?= $twOptions ?></select></td>
-          <td><select name="NW[]"><?= $nwOptions ?></select></td>
-          <td><?= htmlspecialchars((string) ($row['Stn Rk TW'] ?? '')) ?></td>
-          <td class="rc-stn-up"><?= htmlspecialchars((string) ($row['Stn Rk UP'] ?? '')) ?></td>
+          <td><select name="TW[]" class="rc-sel-tw"><?= $twOptions ?></select></td>
+          <td><select name="NW[]" class="rc-sel-nw"><?= $nwOptions ?></select></td>
           <td><?= htmlspecialchars($row['Artist'] ?? '') ?></td>
           <td><?= htmlspecialchars($row['Title'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['CanCon'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['Year'] ?? '') ?></td>
-          <td><?= htmlspecialchars((string) ($row['Spins TW'] ?? '')) ?></td>
-          <td><?= htmlspecialchars((string) ($row['+/-'] ?? '')) ?></td>
-          <td><?= htmlspecialchars($row['AMD'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['MID'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['PMD'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['EVE'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['Market Shr (%)'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['First Played'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['ATD'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['Rank'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['Peak'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['CANADA'] ?? '') ?></td>
-          <td><?= htmlspecialchars($row['MARKET'] ?? '') ?></td>
+          <td><?= htmlspecialchars((string) ($row['WEEKS'] ?? '')) ?></td>
+          <td><select name="CAT[]" class="rc-sel-cat"><?= $catOptions ?></select></td>
+          <td><?= htmlspecialchars((string) ($row['Spins ATD'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['#Streams CA'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['#Streams Van'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['#Spins TW'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['#Stns TW'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['Avg Spins'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['MB Cht'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['Rk'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['Peak'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['BB SJ Chart'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['Freq/Listen ATD'] ?? '')) ?></td>
+          <td><?= htmlspecialchars((string) ($row['Impres ATD'] ?? '')) ?></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
