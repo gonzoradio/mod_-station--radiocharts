@@ -1,12 +1,11 @@
 In the csv descriptions below the cells are identified by row#:col#
 
-
 . . . . . . . .
 
-National Mediabase Playlist Data Example
+National Mediabase Playlist Smooth Jazz Data Example
 
 Data File Location:
-data/NationalPlaylist_example.csv
+data/NationalPlaylist_SJexample.csv
 
 this source is the Mediabase Published 7-Day Chart data for national tracking of songs' data.
 
@@ -14,59 +13,85 @@ Date and csv information is found at 2:1
 
 The first set of column id start on row 4 of the csv.
 
-4:1 - Rank
+4:1 - PK
+Denotes the peak ranking of a song nationally for this week.
+
+4:2 - Rank
 This is the national rank of a song.
 Has a subset at cells
-5:1 (LW - Last Week)
-5:2 (TW - This Week)
+5:2 (LW - Last Week)
+5:3 (TW - This Week)
 
+4:4 - (up TW)
+This column denotes whether a song has moved up in rank.
+Yes = the song has improved ranking
+We want to make our final module output show the Rank TW in green if this column indicates Yes, but only in instances when our module table calls for Rank TW of a song.
 
-4:4 - Artist
+4:5 - Artist
 will need to account for differences in text case and how name is displayed between the different csv sources as there is not standardization between Mediabase, Luminate, or internally generated Music Master csv files. Decision making should rely more on the song title matching and the artist can be a 'close enough' matching check.
 
-4:5 - Title
+4:6 - Title
 This is the song title, and is the first line of matching between csv sources. We must also account for discrepancies in text formatting as mentioned above for the artist name. In some cases the song title will be truncated in a source csv, or have punctuation like , . () " or - that may cause issues with matching songs across csv sources.
 
-4:6 - Label
+4:7 - Label
 This is the record label owner of the song.
 
-4:7 - Cancon
-This column signifies if a song is Canadian Content.
+4:8 - Wks ON
+This column signifies the number of weeks the song has been charting.
 
-4:8 - Spins
+4:9 - Spins
 The amount of plays a song received nationally.
 Spins has a subset at 
-5:8 (TW - This Week)
-5:9 (LW - Last Week)
-5:10 (+/- - the movement up or down between Spins TW and LW)
+5:9 (TW - This Week)
+5:10 (LW - Last Week)
+5:11 (+/- - the movement up or down between Spins TW and LW)
 
-4:11 - Dayparts
+4:12 - Dayparts
 These are the spins by different periods of the day as defined by radio. There will be certain instances where we want to ignore the over night OVN time period.
 Dayparts has a subset at
-5:11 (OVN - Overnights)
-5:12 (AMD - Mornings)
-5:13 (MID - Middays)
-5:14 (PMD - Afternoons)
-5:15 (EVE - Evenings)
+5:12 (OVN - Overnights)
+5:13 (AMD - Mornings)
+5:14 (MID - Middays)
+5:15 (PMD - Afternoons)
+5:16 (EVE - Evenings)
 
-4:16 - Impressions
+4:17 - Impressions
 Has a subset at 
-5:16 - TW (This Week)
+5:17 (TW - This Week)
+5:18 (LW - Last Week)
+5:19 (+/- - movement)
+5:20 (rTW - Rank This Week denotes the ranking of a song this week.)
+5:21 (rLW - Rank This Week denotes the ranking of a song this week.)
 
-4:17 - Stations
+4:22 - Stations
 This is the number of stations who have played the song.
 Stations has a subset at
-5:17 (On - Number of stations songs was on)
-5:18 (New - Number of station that just started playing the song)
+5:22 (On - Number of stations songs was on)
+5:23 (New - Number of station that just started playing the song)
 
-4:19 - Avg. Station Rotations
+4:24 - Avg. Station Rotations
 This is the average number of plays and by how many stations.
 Avg. Station Rotations as a subset at
-5:19 (On - number of stations the song was played on.)
-5:20 (TW - This Week's average play rotation)
-5:21 (LW - Last Week's average play rotation)
-5:22 (+/- - The movement between LW and TW)
+5:24 (On - number of stations the song was played on.)
+5:25 (TW - This Week's average play rotation)
+5:26 (LW - Last Week's average play rotation)
+5:27 (+/- - The movement between LW and TW)
 
+4:28 - w/o OVN
+Denotes the rank and spins of a song.
+Has a subset at
+5:28 (Rank)
+5:29 (TW - This Week)
+
+4:30 - 6am to 7pm
+Denotes rank and spins for this day period.
+Has a subset at
+5:30 (Rank)
+5:31 (TW - This Week)
+
+4:32 - Format By Format Rank
+5:32 - Smooth Jazz
+5:33 - Big Picture (not used)
 
 . . . . . .
 
@@ -199,6 +224,8 @@ P
 V
 T
 TG
+
+2:** / ADD/INJECT column HERE for "Spins TW" and get this data from column 6 of MusicMasterCSV_example.csv
 
 2:6 - Spins ATD
 This is the station's number of spins taken from the Station Playlist csv file from the column - Hist Spins.
