@@ -83,10 +83,11 @@ $catOptionsMap = $buildOptionsMap($catOpts);
       <option value="artist">Artist</option>
       <option value="title">Title</option>
       <option value="weeks">WEEKS</option>
+      <option value="spins_tw">Spins TW</option>
       <option value="spins_atd">Spins ATD</option>
       <option value="streams_ca">#Streams CA</option>
       <option value="streams_van">#Streams Van</option>
-      <option value="spins_tw">#Spins TW</option>
+      <option value="nat_spins_tw">#Spins TW</option>
       <option value="stns_tw">#Stns TW</option>
       <option value="avg_spins">Avg Spins</option>
       <option value="mb_cht">MB Cht</option>
@@ -128,10 +129,10 @@ $catOptionsMap = $buildOptionsMap($catOpts);
         <tr>
           <th colspan="2">Category</th>
           <th></th><th></th><th></th><th></th>
-          <th>Spins</th>
+          <th colspan="2">Spins</th>
           <th colspan="2">OD Streams</th>
           <th colspan="3">National</th>
-          <th colspan="5">Chart Info</th>
+          <th colspan="6">Chart Info</th>
         </tr>
         <tr>
           <th>TW</th>
@@ -140,6 +141,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
           <th>Title</th>
           <th>WEEKS</th>
           <th>CAT</th>
+          <th>TW</th>
           <th>ATD</th>
           <th>#CA</th>
           <th>#Van</th>
@@ -163,6 +165,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
           <td><?= htmlspecialchars($row['Title'] ?? '') ?></td>
           <td><?= htmlspecialchars((string) ($row['WEEKS'] ?? '')) ?></td>
           <td><select name="CAT[]" class="rc-sel-cat"><?= $catOptionsMap[$row['CAT'] ?? ''] ?? $catOptionsMap[''] ?></select></td>
+          <td><?= htmlspecialchars((string) ($row['Spins TW'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['Spins ATD'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['#Streams CA'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['#Streams Van'] ?? '')) ?></td>
@@ -170,7 +173,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
           <td><?= htmlspecialchars((string) ($row['#Stns TW'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['Avg Spins'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['MB Cht'] ?? '')) ?></td>
-          <td><?= htmlspecialchars((string) ($row['Rk'] ?? '')) ?></td>
+          <td<?= !empty($row['RkGreen']) ? ' class="rc-rk-up"' : '' ?>><?= htmlspecialchars((string) ($row['Rk'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['Peak'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['BB SJ Chart'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['Freq/Listen ATD'] ?? '')) ?></td>

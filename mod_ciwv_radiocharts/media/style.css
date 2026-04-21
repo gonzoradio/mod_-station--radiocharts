@@ -114,3 +114,9 @@
     font-style: italic;
     color: #666;
 }
+
+/* Rk cell highlighted green when the SJ chart indicates the song moved up this week */
+.rc-rk-up {
+    color: #2e7d32;
+    font-weight: bold;
+}
