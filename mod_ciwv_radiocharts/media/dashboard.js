@@ -1,46 +1,48 @@
-/* mod_ciwv_radiocharts – dashboard.js */
+/* mod_ciwv_radiocharts – dashboard.js v2 */
 document.addEventListener('DOMContentLoaded', function () {
 
   // ── Column index map (must match tmpl/default.php column order) ──────────
+  // Columns: TW(0), NW(1), Artist(2), Title(3), WEEKS(4), CAT(5),
+  //          Spins ATD(6), #Streams CA(7), #Streams Van(8),
+  //          #Spins TW(9), #Stns TW(10), Avg Spins(11),
+  //          MB Cht(12), Rk(13), Peak(14), BB SJ Chart(15),
+  //          Freq/Listen ATD(16), Impres ATD(17)
   const COL = {
     tw:          0,
     nw:          1,
-    stn_rk_tw:   2,
-    stn_rk_up:   3,
-    artist:      4,
-    title:       5,
-    cancon:      6,
-    year:        7,
-    spins_tw:    8,
-    spins_delta: 9,
-    amd:         10,
-    mid:         11,
-    pmd:         12,
-    eve:         13,
-    market_shr:  14,
-    first_played:15,
-    atd:         16,
-    nat_rank:    17,
-    nat_peak:    18,
-    od_canada:   19,
-    od_market:   20
+    artist:      2,
+    title:       3,
+    weeks:       4,
+    cat:         5,
+    spins_atd:   6,
+    streams_ca:  7,
+    streams_van: 8,
+    spins_tw:    9,
+    stns_tw:     10,
+    avg_spins:   11,
+    mb_cht:      12,
+    rk:          13,
+    peak:        14,
+    bb_sj:       15,
+    freq_atd:    16,
+    imp_atd:     17
   };
 
   // Custom sort order for TW category
   const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',''];
 
+  // TW and NW option lists (must match helper.php)
+  const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT'];
+  const NW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',
+                   'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC2?','PC3?','Q?','OUT?'];
+  const CAT_VALS = ['','1','2','3','S','PSG','G','F','GS','GP','P','V','T','TG','SP','TS','GT'];
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  function getTable() {
-    return document.querySelector('.rc-dashboard-table');
-  }
+  function getTable() { return document.querySelector('.rc-dashboard-table'); }
+  function getTBody() { const t = getTable(); return t ? t.tBodies[0] : null; }
 
-  function getTBody() {
-    const t = getTable();
-    return t ? t.tBodies[0] : null;
-  }
-
-  // Match PHP's normalize()
+  // Match PHP's normalize() for artist|title key generation
   function normalizeKey(artist, title) {
     let a = artist.trim().toLowerCase();
     let t = title.trim().toLowerCase();
@@ -57,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return a + '|' + t;
   }
 
+  // Get value from a cell that may contain a <select>
   function selectValue(row, col) {
     const cell = row.cells[col];
     if (!cell) return '';
@@ -74,9 +77,10 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Read module options injected via Joomla.addScriptOptions
-  const rcOpts      = (typeof Joomla !== 'undefined' && Joomla.getOptions) ? (Joomla.getOptions('rciwv') || {}) : {};
-  const weekStart   = rcOpts.weekStart    || window.RCIWV_WEEK_START    || '';
-  const selectedWeek= rcOpts.selectedWeek || window.RCIWV_SELECTED_WEEK || 'current';
+  const rcOpts       = (typeof Joomla !== 'undefined' && Joomla.getOptions)
+                       ? (Joomla.getOptions('rciwv') || {}) : {};
+  const weekStart    = rcOpts.weekStart    || window.RCIWV_WEEK_START    || '';
+  const selectedWeek = rcOpts.selectedWeek || window.RCIWV_SELECTED_WEEK || 'current';
 
   // ── Sorting ────────────────────────────────────────────────────────────────
   const sortSelect   = document.getElementById('rc-sort-select');
@@ -96,31 +100,22 @@ document.addEventListener('DOMContentLoaded', function () {
         const iB = TW_ORDER.indexOf(vB);
         return (iA === -1 ? TW_ORDER.length : iA) - (iB === -1 ? TW_ORDER.length : iB);
       });
-    } else if (sortBy === 'stn_rk_tw') {
-      rows.sort((a, b) => {
-        const nA = parseInt(a.cells[COL.stn_rk_tw]?.textContent.trim()) || 0;
-        const nB = parseInt(b.cells[COL.stn_rk_tw]?.textContent.trim()) || 0;
-        if (nA === 0 && nB !== 0) return 1;
-        if (nB === 0 && nA !== 0) return -1;
-        return nA - nB;
-      });
     } else {
-      const colIdx = {
-        artist: COL.artist, title: COL.title, year: COL.year,
-        spins_tw: COL.spins_tw, spins_delta: COL.spins_delta,
-        market_shr: COL.market_shr, first_played: COL.first_played,
-        atd: COL.atd, nat_rank: COL.nat_rank, nat_peak: COL.nat_peak,
-        od_canada: COL.od_canada, od_market: COL.od_market
-      }[sortBy];
+      const colMap = {
+        artist: COL.artist, title: COL.title, weeks: COL.weeks,
+        spins_atd: COL.spins_atd, streams_ca: COL.streams_ca, streams_van: COL.streams_van,
+        spins_tw: COL.spins_tw, stns_tw: COL.stns_tw, avg_spins: COL.avg_spins,
+        rk: COL.rk
+      };
+      const colIdx = colMap[sortBy];
       if (colIdx !== undefined) {
         rows.sort((a, b) => {
-          const cA = a.cells[colIdx]?.textContent.trim() ?? '';
-          const cB = b.cells[colIdx]?.textContent.trim() ?? '';
+          const cA = (a.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '');
+          const cB = (b.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '');
+          if (cA === '' && cB !== '') return 1;
+          if (cB === '' && cA !== '') return -1;
           if (!isNaN(cA) && !isNaN(cB) && cA !== '' && cB !== '') {
             return parseFloat(cA) - parseFloat(cB);
-          }
-          if (/^\d{4}-\d{2}-\d{2}$/.test(cA) && /^\d{4}-\d{2}-\d{2}$/.test(cB)) {
-            return new Date(cA) - new Date(cB);
           }
           return cA.localeCompare(cB, undefined, { numeric: true, sensitivity: 'base' });
         });
@@ -134,19 +129,19 @@ document.addEventListener('DOMContentLoaded', function () {
   function initialSort() {
     const tbody = getTBody();
     if (!tbody) return;
-    const rows   = Array.from(tbody.rows);
-    const hasTW  = rows.some(r => {
+    const rows  = Array.from(tbody.rows);
+    const hasTW = rows.some(r => {
       const sel = r.cells[COL.tw]?.querySelector('select');
       return sel && sel.value !== '';
     });
-    if (sortSelect) sortSelect.value = hasTW ? 'tw' : 'stn_rk_tw';
+    if (sortSelect) sortSelect.value = hasTW ? 'tw' : 'rk';
     sortTable();
   }
 
   if (sortSelect)   sortSelect.addEventListener('change', sortTable);
   if (reverseCheck) reverseCheck.addEventListener('change', sortTable);
 
-  // ── Load saved TW/NW from DB ───────────────────────────────────────────────
+  // ── Load saved TW / NW / CAT from DB ──────────────────────────────────────
   if (weekStart) {
     fetch('/modules/mod_ciwv_radiocharts/ajax/loadstate.php?week_start=' + encodeURIComponent(weekStart))
       .then(r => r.json())
@@ -165,13 +160,14 @@ document.addEventListener('DOMContentLoaded', function () {
           const title  = row.cells[COL.title]?.textContent.trim()  || '';
           const k      = normalizeKey(artist, title);
           if (stateMap[k]) {
-            const twSel = row.querySelector('select[name="TW[]"]');
-            const nwSel = row.querySelector('select[name="NW[]"]');
-            if (twSel) twSel.value = stateMap[k].tw || '';
-            if (nwSel) nwSel.value = stateMap[k].nw || '';
+            const twSel  = row.querySelector('select.rc-sel-tw');
+            const nwSel  = row.querySelector('select.rc-sel-nw');
+            const catSel = row.querySelector('select.rc-sel-cat');
+            if (twSel)  twSel.value  = stateMap[k].tw  || '';
+            if (nwSel)  nwSel.value  = stateMap[k].nw  || '';
+            if (catSel) catSel.value = stateMap[k].cat || '';
           }
         });
-        // Sort after loading state (TW values now known)
         initialSort();
       })
       .catch(() => initialSort());
@@ -185,45 +181,53 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!tbody) return;
 
     const stateRows = Array.from(tbody.rows).map(row => ({
-      tw:              row.querySelector('select[name="TW[]"]')?.value ?? '',
-      nw:              row.querySelector('select[name="NW[]"]')?.value ?? '',
-      'Stn Rk TW':     row.cells[COL.stn_rk_tw]?.textContent.trim()  ?? '',
-      'Stn Rk LW':     '',  // Stn Rk LW is not a visible column; populated by helper.php only
-      'Stn Rk UP':     row.cells[COL.stn_rk_up]?.textContent.trim()  ?? '',
+      tw:              selectValue(row, COL.tw),
+      nw:              selectValue(row, COL.nw),
       artist:          row.cells[COL.artist]?.textContent.trim()      ?? '',
       title:           row.cells[COL.title]?.textContent.trim()       ?? '',
-      cancon:          row.cells[COL.cancon]?.textContent.trim()      ?? '',
-      year:            row.cells[COL.year]?.textContent.trim()        ?? '',
-      'Spins TW':      row.cells[COL.spins_tw]?.textContent.trim()   ?? '',
-      '+/-':           row.cells[COL.spins_delta]?.textContent.trim() ?? '',
-      AMD:             row.cells[COL.amd]?.textContent.trim()         ?? '',
-      MID:             row.cells[COL.mid]?.textContent.trim()         ?? '',
-      PMD:             row.cells[COL.pmd]?.textContent.trim()         ?? '',
-      EVE:             row.cells[COL.eve]?.textContent.trim()         ?? '',
-      'Market Shr (%)':row.cells[COL.market_shr]?.textContent.trim() ?? '',
-      'First Played':  row.cells[COL.first_played]?.textContent.trim() ?? '',
-      ATD:             row.cells[COL.atd]?.textContent.trim()         ?? '',
-      Rank:            row.cells[COL.nat_rank]?.textContent.trim()    ?? '',
-      Peak:            row.cells[COL.nat_peak]?.textContent.trim()    ?? '',
-      CANADA:          row.cells[COL.od_canada]?.textContent.trim()   ?? '',
-      MARKET:          row.cells[COL.od_market]?.textContent.trim()   ?? '',
+      weeks:           row.cells[COL.weeks]?.textContent.trim()       ?? '',
+      cat:             selectValue(row, COL.cat),
+      'Spins ATD':     row.cells[COL.spins_atd]?.textContent.trim()   ?? '',
+      '#Streams CA':   row.cells[COL.streams_ca]?.textContent.trim()  ?? '',
+      '#Streams Van':  row.cells[COL.streams_van]?.textContent.trim() ?? '',
+      '#Spins TW':     row.cells[COL.spins_tw]?.textContent.trim()    ?? '',
+      '#Stns TW':      row.cells[COL.stns_tw]?.textContent.trim()     ?? '',
+      'Avg Spins':     row.cells[COL.avg_spins]?.textContent.trim()   ?? '',
+      'MB Cht':        row.cells[COL.mb_cht]?.textContent.trim()      ?? '',
+      'Rk':            row.cells[COL.rk]?.textContent.trim()          ?? '',
+      'Peak':          row.cells[COL.peak]?.textContent.trim()        ?? '',
+      'BB SJ Chart':   row.cells[COL.bb_sj]?.textContent.trim()      ?? '',
+      'Freq/Listen ATD': row.cells[COL.freq_atd]?.textContent.trim()  ?? '',
+      'Impres ATD':    row.cells[COL.imp_atd]?.textContent.trim()     ?? '',
     }));
 
     const metaElem = document.getElementById('rc-meta-line');
     const metaLine = metaElem ? metaElem.textContent.trim() : '';
 
     fetch('/modules/mod_ciwv_radiocharts/ajax/savestate.php', {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        state:      stateRows,
-        week_start: weekStart,
-        meta_line:  metaLine
-      })
+      body:    JSON.stringify({ state: stateRows, week_start: weekStart, meta_line: metaLine })
     })
     .then(r => r.json())
-    .then(d => alert('Saved for week: ' + (d.week_start || 'unknown')))
-    .catch(() => alert('Save failed.'));
+    .then(d => {
+      if (d.success) {
+        alert('Saved for week: ' + d.week_start);
+        // If the week selector doesn't already have this week, add it
+        if (weekSelect && weekStart) {
+          const existing = Array.from(weekSelect.options).some(o => o.value === d.week_start);
+          if (!existing) {
+            const opt = document.createElement('option');
+            opt.value       = d.week_start;
+            opt.textContent = d.week_start;
+            weekSelect.insertBefore(opt, weekSelect.options[1]);
+          }
+        }
+      } else {
+        alert('Save failed: ' + (d.error || 'unknown error'));
+      }
+    })
+    .catch(() => alert('Save failed – could not reach server.'));
   });
 
   // ── Export CSV ─────────────────────────────────────────────────────────────
@@ -231,25 +235,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const tbody = getTBody();
     if (!tbody) return;
 
-    const allRows = Array.from(tbody.rows).map(row => ({
-      row,
-      tw: selectValue(row, COL.tw),
-      nw: selectValue(row, COL.nw)
-    }));
+    const allRows = Array.from(tbody.rows);
 
-    // Group: A1/J/A2/P/B/C/D then ADDs-by-NW then others
-    const groups   = {};
-    const addsByNW = {};
-    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(c => { groups[c] = []; addsByNW[c] = []; });
-    const leftovers = [];
+    // Group rows by TW category; rows with no TW/NW go into a "Considerations" group
+    const groups     = {};
+    const addsByNW   = {};
+    const noCategory = [];
+    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(c => {
+      groups[c]   = [];
+      addsByNW[c] = [];
+    });
+    const others = [];
 
-    allRows.forEach(item => {
-      if (item.tw === 'ADD' && addsByNW[item.nw]) {
-        addsByNW[item.nw].push(item.row);
-      } else if (groups[item.tw]) {
-        groups[item.tw].push(item.row);
-      } else if (item.tw !== '' || item.nw !== '') {
-        leftovers.push(item.row);
+    allRows.forEach(row => {
+      const tw = selectValue(row, COL.tw);
+      const nw = selectValue(row, COL.nw);
+      if (tw === 'ADD' && addsByNW[nw]) {
+        addsByNW[nw].push(row);
+      } else if (groups[tw]) {
+        groups[tw].push(row);
+      } else if (tw !== '' || nw !== '') {
+        others.push(row);
+      } else {
+        noCategory.push(row);
       }
     });
 
@@ -257,10 +265,13 @@ document.addEventListener('DOMContentLoaded', function () {
     ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(k => {
       finalRows.push(...groups[k], ...addsByNW[k]);
     });
-    finalRows.push(...leftovers);
+    finalRows.push(...others, ...noCategory);
 
-    const h1 = ['','','Stn Rk','','','','','','Spins','','Day Parts','','','','Market','Historical','','Format','','OD-STREAMS-TW',''];
-    const h2 = ['TW','NW','TW','UP','Artist','Title','CanCon','Year','TW','+/-','AMD','MID','PMD','EVE','Shr (%)','First Played','ATD','Rank','Peak','CANADA','MARKET'];
+    // Header rows matching final-output-example.csv layout
+    const h1 = ['','','','','','','Spins','OD Streams','','National','','','Chart Info','','','','',''];
+    const h2 = ['TW','NW','Artist','Title','WEEKS','CAT','ATD',
+                '#Streams CA','#Streams Van','#Spins TW','#Stns TW','Avg Spins',
+                'MB Cht','Rk','Peak','BB SJ Chart','Freq/Listen ATD','Impres ATD'];
 
     function escCSV(v) {
       if (v == null) return '';
@@ -271,108 +282,64 @@ document.addEventListener('DOMContentLoaded', function () {
     const lines = [h1.map(escCSV).join(','), h2.map(escCSV).join(',')];
     finalRows.forEach(row => {
       const cells = Array.from(row.cells).map((cell, idx) => {
-        if (idx === COL.tw || idx === COL.nw) {
-          const sel = cell.querySelector('select');
-          return sel ? sel.value : cell.textContent.trim();
-        }
-        return cell.textContent.trim();
+        const sel = cell.querySelector('select');
+        return sel ? sel.value : cell.textContent.trim();
       });
       lines.push(cells.map(escCSV).join(','));
     });
 
-    // Also auto-save on export
-    const stateRows = Array.from(getTBody().rows).map(row => ({
-      artist: row.cells[COL.artist]?.textContent.trim(),
-      title:  row.cells[COL.title]?.textContent.trim(),
-      tw:     row.querySelector('select[name="TW[]"]')?.value,
-      nw:     row.querySelector('select[name="NW[]"]')?.value,
-      'Spins TW': row.cells[COL.spins_tw]?.textContent.trim()
-    }));
-
-    const doDownload = () => {
-      const BOM  = '\uFEFF';
-      const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = 'radiocharts_export.csv';
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
-    };
-
-    fetch('/modules/mod_ciwv_radiocharts/ajax/savestate.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state: stateRows, week_start: weekStart })
-    }).finally(doDownload);
+    const BOM  = '\uFEFF';
+    const blob = new Blob([BOM + lines.join('\r\n')], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const wkLabel = (weekStart && weekStart !== 'current') ? weekStart : 'current';
+    a.href     = url;
+    a.download = 'CIWV_radiocharts_' + wkLabel + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
   });
 
-  // ── Manual row add (only for saved weeks) ─────────────────────────────────
-  const isCurrent = selectedWeek === 'current';
-  const manualInputs = ['rc-manual-artist','rc-manual-title','rc-manual-cancon','rc-manual-year','rc-add-manual-row'];
-  manualInputs.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = isCurrent;
-  });
+  // ── Manual Add Row ─────────────────────────────────────────────────────────
+  function makeSelect(name, cssClass, vals) {
+    const sel = document.createElement('select');
+    sel.name      = name;
+    sel.className = cssClass;
+    vals.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v; opt.textContent = v;
+      sel.appendChild(opt);
+    });
+    return sel;
+  }
 
   document.getElementById('rc-add-manual-row')?.addEventListener('click', function () {
     const artist = document.getElementById('rc-manual-artist')?.value.trim() || '';
-    const title  = document.getElementById('rc-manual-title')?.value.trim() || '';
-    const cancon = document.getElementById('rc-manual-cancon')?.value || '';
-    const year   = document.getElementById('rc-manual-year')?.value.trim() || '';
+    const title  = document.getElementById('rc-manual-title')?.value.trim()  || '';
+    const weeks  = document.getElementById('rc-manual-weeks')?.value.trim()  || '';
     if (!artist || !title) { alert('Artist and Title are required.'); return; }
-    if (year && !/^\d{4}$/.test(year)) { alert('Year should be 4 digits.'); return; }
 
     const tbody = getTBody();
     if (!tbody) return;
 
-    const twVals = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT'];
-    const nwVals = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',
-                    'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC2?','PC3?','Q?','OUT?'];
-
-    function makeSelect(name, vals) {
-      const sel = document.createElement('select');
-      sel.name = name;
-      vals.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v;
-        opt.textContent = v;
-        sel.appendChild(opt);
-      });
-      return sel;
-    }
-
     const tr = document.createElement('tr');
+    const addTd = v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); return td; };
+    const addSelTd = (name, cls, vals) => { const td = document.createElement('td'); td.appendChild(makeSelect(name, cls, vals)); tr.appendChild(td); return td; };
 
-    // TW dropdown
-    const tdTW = document.createElement('td');
-    tdTW.appendChild(makeSelect('TW[]', twVals));
-    tr.appendChild(tdTW);
-
-    // NW dropdown
-    const tdNW = document.createElement('td');
-    tdNW.appendChild(makeSelect('NW[]', nwVals));
-    tr.appendChild(tdNW);
-
-    // Stn Rk TW, Stn Rk UP (blank)
-    tr.appendChild(document.createElement('td'));
-    tr.appendChild(document.createElement('td'));
-
-    // Artist, Title, CanCon, Year (user values via textContent)
-    [artist, title, cancon, year].forEach(val => {
-      const td = document.createElement('td');
-      td.textContent = val;
-      tr.appendChild(td);
-    });
-
-    // Remaining blank columns
-    for (let i = 0; i < 13; i++) tr.appendChild(document.createElement('td'));
+    addSelTd('TW[]', 'rc-sel-tw', TW_VALS);
+    addSelTd('NW[]', 'rc-sel-nw', NW_VALS);
+    addTd(artist);
+    addTd(title);
+    addTd(weeks);
+    addSelTd('CAT[]', 'rc-sel-cat', CAT_VALS);
+    // Remaining data columns (blank)
+    for (let i = 6; i < Object.keys(COL).length; i++) addTd('');
 
     tbody.appendChild(tr);
 
     document.getElementById('rc-manual-artist').value = '';
     document.getElementById('rc-manual-title').value  = '';
-    document.getElementById('rc-manual-cancon').value = '';
-    document.getElementById('rc-manual-year').value   = '';
+    document.getElementById('rc-manual-weeks').value  = '';
   });
 
 });
