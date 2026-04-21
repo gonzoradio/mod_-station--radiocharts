@@ -189,7 +189,7 @@ class ModCiwvRadiochartsHelper
             $artist   = $col1;
             $title    = $col2;
             $weeks    = trim($row[3] ?? '');
-            $catCode  = trim($row[4] ?? '');
+            $catCode  = strtoupper(trim($row[4] ?? ''));
             $spins    = trim($row[5] ?? '');
             // Map MusicMaster category code to module TW category
             $twCat = self::normaliseMmCategory($col0);
