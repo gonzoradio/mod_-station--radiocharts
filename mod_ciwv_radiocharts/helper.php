@@ -358,10 +358,11 @@ class ModCiwvRadiochartsHelper
      * Column positions (1-indexed per data-column-definitions.md):
      *   1:1  (index 0)  – Title
      *   1:2  (index 1)  – Artist
-     *   1:14 (index 13) – National Streams TW
-     *   1:15 (index 14) – % Change (national)
-     *   1:18 (index 17) – Local Market Streams TW
-     *   1:19 (index 18) – % Change – Market
+     *   1:14 (index 13) – National Streams TW  → stored as CANADA
+     *   1:18 (index 17) – Local Market Streams TW → stored as MARKET
+     *
+     * Columns 1:15 (% Change national) and 1:19 (% Change market) are present in
+     * the file but not extracted; only the stream counts are needed for the dashboard.
      *
      * Returns map: normalize(artist, title) => ['CANADA' => streams_tw, 'MARKET' => market_streams_tw]
      */

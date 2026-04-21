@@ -15,7 +15,8 @@ if ($customPath !== '') {
 }
 $allowedTypes = (array) $params->get('allowed_csv_types', array_keys(ModCiwvRadiochartsHelper::$csvNames));
 // Map legacy option values saved before the csvNames refactor.
-// Old 'national' → new 'national_sj' + 'national_ac'; old 'streaming_station' and 'streaming_market' removed.
+// Old 'national' → new 'national_sj' + 'national_ac'; old 'streaming_station' removed;
+// old 'streaming_market' → new 'streaming'.
 $legacyMap = ['national' => ['national_sj', 'national_ac'], 'streaming_station' => [], 'streaming_market' => ['streaming']];
 foreach ($legacyMap as $oldKey => $newKeys) {
     if (in_array($oldKey, $allowedTypes, true)) {
