@@ -660,7 +660,9 @@ class ModCiwvRadiochartsHelper
                 return $streamingIdx[$key];
             }
             foreach ($streamingIdx as $sKey => $sVal) {
-                [$sa, $st] = explode('|', $sKey . '|', 2);
+                $parts = explode('|', $sKey, 2);
+                $sa    = $parts[0] ?? '';
+                $st    = $parts[1] ?? '';
                 if (self::titlesMatch($title, $st)
                     && (self::artistsMatch($artist, $sa) || self::surnameMatch($artist, $sa))) {
                     return $sVal;
