@@ -1,11 +1,12 @@
 /* ── mod_ciwv_radiocharts dashboard styles ──────────────────────────── */
 
 .rc-upload-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5em;
-    margin-bottom: 0.75em;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5em;
+	margin-bottom: 0.75em;
+	max-width: 1550px;
 }
 
 .rc-upload-form {
