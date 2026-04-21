@@ -16,12 +16,12 @@ class ModCiwvRadiochartsHelper
     public static $catOptions = ['1', '2', '3', 'S', 'PSG', 'G', 'F', 'GS', 'GP', 'P', 'V', 'T', 'TG', 'SP', 'TS', 'GT'];
 
     public static $csvNames = [
-        'national'          => 'NationalPlaylist',
-        'station'           => 'StationPlaylist',
-        'streaming_station' => 'StreamingDataStation',
-        'streaming_market'  => 'StreamingDataMarket',
-        'musicmaster'       => 'MusicMasterCSV',
-        'billboard'         => 'BillboardChart',
+        'national_sj'      => 'NationalPlaylist_SJ',
+        'national_ac'      => 'NationalPlaylist_AC',
+        'station'          => 'StationPlaylist',
+        'streaming_market' => 'StreamingDataMarket',
+        'musicmaster'      => 'MusicMasterCSV',
+        'billboard'        => 'BillboardChart',
     ];
 
     // ── Normalisation / fuzzy match ──────────────────────────────────────────
@@ -523,47 +523,64 @@ class ModCiwvRadiochartsHelper
      * Build the combined dashboard rows from whichever CSVs are available.
      *
      * Column set matches data/final-output-example.csv:
-     *   TW, NW, Artist, Title, WEEKS, CAT, Spins ATD,
-     *   #Streams CA, #Streams Van, #Spins TW, #Stns TW, Avg Spins,
+     *   TW, NW, Artist, Title, WEEKS, CAT, Spins TW (MusicMaster),
+     *   Spins ATD, #Streams CA, #Streams Van, #Spins TW, #Stns TW, Avg Spins,
      *   MB Cht, Rk, Peak, BB SJ Chart, Freq/Listen ATD, Impres ATD
+     *
+     * MB Cht values:
+     *   'SJAC'  – Rk/Peak sourced from the Smooth Jazz AC national chart
+     *   'CANAC' – song found on the Mainstream AC national chart only
+     *   ''      – no national chart match
+     *
+     * RkGreen is true when the SJ national chart reports the song moved up
+     * this week (col_3 === 'Yes' in the SJ composite-header CSV), indicating
+     * the Rk cell should be styled green in the dashboard.
      *
      * @param  string $dataDir  Absolute path to the data directory.
      * @return array  ['meta' => [...], 'rows' => [...]]
      */
     public static function getCombinedRows($dataDir)
     {
-        $stationFile   = self::getLatestFile($dataDir, 'station');
-        $nationalFile  = self::getLatestFile($dataDir, 'national');
-        $strmMktFile   = self::getLatestFile($dataDir, 'streaming_market');
-        $strmStaFile   = self::getLatestFile($dataDir, 'streaming_station');
-        $mmFile        = self::getLatestFile($dataDir, 'musicmaster');
+        $stationFile  = self::getLatestFile($dataDir, 'station');
+        $nationalSjFile = self::getLatestFile($dataDir, 'national_sj');
+        $nationalAcFile = self::getLatestFile($dataDir, 'national_ac');
+        $strmMktFile  = self::getLatestFile($dataDir, 'streaming_market');
+        $mmFile       = self::getLatestFile($dataDir, 'musicmaster');
 
         // --- Station Playlist (primary source: Spins ATD, Format Rank, song list) ---
         $playlist = $stationFile ? self::parseStationPlaylistCsv($stationFile) : [];
 
-        // --- National Playlist (national spins, station count, national rank) ---
-        $nationalRows = $nationalFile ? self::parseNationalCsv($nationalFile) : [];
-        $nationalIdx  = [];
-        foreach ($nationalRows as $nr) {
+        // --- National Playlist – Smooth Jazz AC (MB Cht = SJAC, Rk, Peak, RkGreen) ---
+        $nationalSjRows = $nationalSjFile ? self::parseNationalCsv($nationalSjFile) : [];
+        $nationalSjIdx  = [];
+        foreach ($nationalSjRows as $nr) {
             $artist = $nr['Artist'] ?? '';
             $title  = $nr['Title'] ?? '';
             if ($artist === '' && $title === '') {
                 continue;
             }
-            $key              = self::normalize($artist, $title);
-            $nationalIdx[$key] = $nr;
+            $key               = self::normalize($artist, $title);
+            $nationalSjIdx[$key] = $nr;
         }
 
-        // --- Music Master (TW category, WEEKS, CAT code) ---
+        // --- National Playlist – Mainstream AC (MB Cht = CANAC, #Spins TW, #Stns TW) ---
+        $nationalAcRows = $nationalAcFile ? self::parseNationalCsv($nationalAcFile) : [];
+        $nationalAcIdx  = [];
+        foreach ($nationalAcRows as $nr) {
+            $artist = $nr['Artist'] ?? '';
+            $title  = $nr['Title'] ?? '';
+            if ($artist === '' && $title === '') {
+                continue;
+            }
+            $key               = self::normalize($artist, $title);
+            $nationalAcIdx[$key] = $nr;
+        }
+
+        // --- Music Master (TW category, WEEKS, CAT code, station Spins TW) ---
         $mmData = $mmFile ? self::parseMusicMasterCsv($mmFile) : [];
 
-        // --- Streaming data (prefer market CSV for both CA and Vancouver) ---
-        $streamingIdx = [];
-        if ($strmMktFile) {
-            $streamingIdx = self::parseLuminateMarketCsv($strmMktFile);
-        } elseif ($strmStaFile) {
-            $streamingIdx = self::parseLuminateCsv($strmStaFile);
-        }
+        // --- Streaming data (market CSV: both CA and Vancouver) ---
+        $streamingIdx = $strmMktFile ? self::parseLuminateMarketCsv($strmMktFile) : [];
 
         // --- Report meta ---
         $reportMeta = $stationFile ? self::getReportMeta($stationFile) : '';
@@ -599,13 +616,30 @@ class ModCiwvRadiochartsHelper
             return null;
         };
 
-        // Helper: fuzzy-lookup national data by artist/title
-        $findNational = function ($artist, $title) use ($nationalIdx) {
+        // Helper: fuzzy-lookup SJ national data by artist/title
+        $findNationalSj = function ($artist, $title) use ($nationalSjIdx) {
             $key = self::normalize($artist, $title);
-            if (isset($nationalIdx[$key])) {
-                return $nationalIdx[$key];
+            if (isset($nationalSjIdx[$key])) {
+                return $nationalSjIdx[$key];
             }
-            foreach ($nationalIdx as $nKey => $nVal) {
+            foreach ($nationalSjIdx as $nKey => $nVal) {
+                $nArtist = $nVal['Artist'] ?? '';
+                $nTitle  = $nVal['Title'] ?? '';
+                if (self::titlesMatch($title, $nTitle)
+                    && (self::artistsMatch($artist, $nArtist) || self::surnameMatch($artist, $nArtist))) {
+                    return $nVal;
+                }
+            }
+            return null;
+        };
+
+        // Helper: fuzzy-lookup AC national data by artist/title
+        $findNationalAc = function ($artist, $title) use ($nationalAcIdx) {
+            $key = self::normalize($artist, $title);
+            if (isset($nationalAcIdx[$key])) {
+                return $nationalAcIdx[$key];
+            }
+            foreach ($nationalAcIdx as $nKey => $nVal) {
                 $nArtist = $nVal['Artist'] ?? '';
                 $nTitle  = $nVal['Title'] ?? '';
                 if (self::titlesMatch($title, $nTitle)
@@ -637,23 +671,17 @@ class ModCiwvRadiochartsHelper
         };
 
         // Helper: build a single output row
-        $buildRow = function ($artist, $title, $pl, $mm, $nat, $s) use ($getHistorical, $getFormatRank) {
+        $buildRow = function ($artist, $title, $pl, $mm, $natSj, $natAc, $s) use ($getHistorical, $getFormatRank) {
             // Streaming
             $streamsCa  = $s['CANADA'] ?? '';
             $streamsVan = $s['MARKET'] ?? '';
 
-            // National data
+            // AC national data – provides #Spins TW and #Stns TW
             $natSpinsTW = '';
             $natStnsOn  = '';
-            $natRk      = '';
-            $natPeak    = '';   // Peak source is not yet identified; remains blank
-            if ($nat) {
-                // Spins_TW key from composite header parsing
-                $natSpinsTW = $nat['Spins_TW'] ?? '';
-                // Stations_On from composite header
-                $natStnsOn  = $nat['Stations_On'] ?? '';
-                // Rank_TW = national chart position this week
-                $natRk      = $nat['Rank_TW'] ?? '';
+            if ($natAc) {
+                $natSpinsTW = $natAc['Spins_TW'] ?? '';
+                $natStnsOn  = $natAc['Stations_On'] ?? '';
             }
 
             // Avg Spins = #Spins TW / #Stns TW (rounded to nearest whole spin)
@@ -665,37 +693,62 @@ class ModCiwvRadiochartsHelper
             }
 
             // Music Master
-            $weeks   = $mm ? $mm['weeks']    : '';
-            $twCat   = $mm ? $mm['tw_cat']   : '';
-            $catCode = $mm ? $mm['cat_code'] : '';
+            $weeks    = $mm ? $mm['weeks']    : '';
+            $twCat    = $mm ? $mm['tw_cat']   : '';
+            $catCode  = $mm ? $mm['cat_code'] : '';
+            $spinsTw  = $mm ? $mm['spins']    : ''; // station Spins TW from MusicMaster
 
             // Spins ATD = station's all-time spins from Station Playlist "Hist Spins"
             $spinsAtd = $pl ? $getHistorical($pl, 'Hist Spins') : '';
 
-            // Format Comparison Rank (station's format chart position)
-            $formatRk = $pl ? $getFormatRank($pl) : '';
-            // Use national rank if format rank is unavailable
-            $rk = ($formatRk !== '') ? $formatRk : $natRk;
+            // SJ national data – provides MB Cht = SJAC, Rk (SJ format rank), Peak (PK), RkGreen
+            // AC national data – provides MB Cht = CANAC fallback, or Rank_TW as Rk fallback
+            // Station playlist Format Comparison Rank is the last Rk fallback.
+            $mbCht   = '';
+            $rk      = '';
+            $peak    = '';
+            $rkGreen = false;
+
+            if ($natSj) {
+                $mbCht   = 'SJAC';
+                // SJ chart rank = "Format By Format Rank_Smooth Jazz" column; fall back to Rank_TW
+                $sjRk    = $natSj['Format By Format Rank_Smooth Jazz'] ?? '';
+                $rk      = ($sjRk !== '' && $sjRk !== '-') ? $sjRk : ($natSj['Rank_TW'] ?? '');
+                // Peak = PK column (all-time peak rank on the SJ chart)
+                $peak    = $natSj['PK'] ?? '';
+                // col_3 is the "up TW" flag column (no section/sub header in the composite CSV)
+                $rkGreen = (trim($natSj['col_3'] ?? '') === 'Yes');
+            } elseif ($natAc) {
+                $mbCht = 'CANAC';
+                // Use station format rank as primary Rk, AC national rank as fallback
+                $formatRk = $pl ? $getFormatRank($pl) : '';
+                $rk       = ($formatRk !== '') ? $formatRk : ($natAc['Rank_TW'] ?? '');
+            } else {
+                // No national data – use station format comparison rank if available
+                $rk = $pl ? $getFormatRank($pl) : '';
+            }
 
             return [
-                'TW'             => $twCat,
-                'NW'             => '',
-                'Artist'         => $artist,
-                'Title'          => $title,
-                'WEEKS'          => $weeks,
-                'CAT'            => $catCode,
-                'Spins ATD'      => $spinsAtd,
-                '#Streams CA'    => $streamsCa,
-                '#Streams Van'   => $streamsVan,
-                '#Spins TW'      => $natSpinsTW,
-                '#Stns TW'       => $natStnsOn,
-                'Avg Spins'      => $avgSpins,
-                'MB Cht'         => '',
-                'Rk'             => $rk,
-                'Peak'           => $natPeak,
-                'BB SJ Chart'    => '',
-                'Freq/Listen ATD'=> '',
-                'Impres ATD'     => '',
+                'TW'              => $twCat,
+                'NW'              => '',
+                'Artist'          => $artist,
+                'Title'           => $title,
+                'WEEKS'           => $weeks,
+                'CAT'             => $catCode,
+                'Spins TW'        => $spinsTw,
+                'Spins ATD'       => $spinsAtd,
+                '#Streams CA'     => $streamsCa,
+                '#Streams Van'    => $streamsVan,
+                '#Spins TW'       => $natSpinsTW,
+                '#Stns TW'        => $natStnsOn,
+                'Avg Spins'       => $avgSpins,
+                'MB Cht'          => $mbCht,
+                'Rk'              => $rk,
+                'Peak'            => $peak,
+                'BB SJ Chart'     => '',
+                'Freq/Listen ATD' => '',
+                'Impres ATD'      => '',
+                'RkGreen'         => $rkGreen,
             ];
         };
 
@@ -716,11 +769,12 @@ class ModCiwvRadiochartsHelper
             $localKeysSet[$key] = true;
             $localSongs[]       = [$artist, $title];
 
-            $mm  = $findMM($artist, $title);
-            $nat = $findNational($artist, $title);
-            $s   = $findStreaming($artist, $title);
+            $mm    = $findMM($artist, $title);
+            $natSj = $findNationalSj($artist, $title);
+            $natAc = $findNationalAc($artist, $title);
+            $s     = $findStreaming($artist, $title);
 
-            $final[] = $buildRow($artist, $title, $pl, $mm, $nat, $s);
+            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s);
         }
 
         // --- Secondary: MusicMaster-only songs not in Station Playlist ---
@@ -744,19 +798,44 @@ class ModCiwvRadiochartsHelper
             }
             $localKeysSet[$key] = true;
             $localSongs[]       = [$artist, $title];
-            $nat = $findNational($artist, $title);
-            $s   = $findStreaming($artist, $title);
-            $final[] = $buildRow($artist, $title, null, $mm, $nat, $s);
+            $natSj = $findNationalSj($artist, $title);
+            $natAc = $findNationalAc($artist, $title);
+            $s     = $findStreaming($artist, $title);
+            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s);
         }
 
-        // --- Tertiary: National-only songs (not in station playlist or MusicMaster) ---
-        foreach ($nationalIdx as $key => $nat) {
+        // --- Tertiary: SJ national-only songs (not in station playlist or MusicMaster) ---
+        foreach ($nationalSjIdx as $key => $natSj) {
             if (isset($localKeysSet[$key])) {
                 continue;
             }
-            $artist = $nat['Artist'] ?? '';
-            $title  = $nat['Title'] ?? '';
-            // Fuzzy dedup: skip if already added under a different artist/title variant
+            $artist = $natSj['Artist'] ?? '';
+            $title  = $natSj['Title'] ?? '';
+            $dup = false;
+            foreach ($localSongs as [$la, $lt]) {
+                if (self::titlesMatch($title, $lt)
+                    && (self::artistsMatch($artist, $la) || self::surnameMatch($artist, $la))) {
+                    $dup = true;
+                    break;
+                }
+            }
+            if ($dup) {
+                continue;
+            }
+            $localKeysSet[$key] = true;
+            $localSongs[]       = [$artist, $title];
+            $natAc = $findNationalAc($artist, $title);
+            $s     = $findStreaming($artist, $title);
+            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s);
+        }
+
+        // --- Quaternary: AC national-only songs (not already added) ---
+        foreach ($nationalAcIdx as $key => $natAc) {
+            if (isset($localKeysSet[$key])) {
+                continue;
+            }
+            $artist = $natAc['Artist'] ?? '';
+            $title  = $natAc['Title'] ?? '';
             $dup = false;
             foreach ($localSongs as [$la, $lt]) {
                 if (self::titlesMatch($title, $lt)
@@ -771,7 +850,7 @@ class ModCiwvRadiochartsHelper
             $localKeysSet[$key] = true;
             $localSongs[]       = [$artist, $title];
             $s = $findStreaming($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, $nat, $s);
+            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s);
         }
 
         return [

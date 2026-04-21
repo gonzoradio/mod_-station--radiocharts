@@ -1,12 +1,12 @@
-/* mod_ciwv_radiocharts – dashboard.js v2 */
+/* mod_ciwv_radiocharts – dashboard.js v3 */
 document.addEventListener('DOMContentLoaded', function () {
 
   // ── Column index map (must match tmpl/default.php column order) ──────────
   // Columns: TW(0), NW(1), Artist(2), Title(3), WEEKS(4), CAT(5),
-  //          Spins ATD(6), #Streams CA(7), #Streams Van(8),
-  //          #Spins TW(9), #Stns TW(10), Avg Spins(11),
-  //          MB Cht(12), Rk(13), Peak(14), BB SJ Chart(15),
-  //          Freq/Listen ATD(16), Impres ATD(17)
+  //          Spins TW(6), Spins ATD(7), #Streams CA(8), #Streams Van(9),
+  //          #Spins TW(10), #Stns TW(11), Avg Spins(12),
+  //          MB Cht(13), Rk(14), Peak(15), BB SJ Chart(16),
+  //          Freq/Listen ATD(17), Impres ATD(18)
   const COL = {
     tw:          0,
     nw:          1,
@@ -14,18 +14,19 @@ document.addEventListener('DOMContentLoaded', function () {
     title:       3,
     weeks:       4,
     cat:         5,
-    spins_atd:   6,
-    streams_ca:  7,
-    streams_van: 8,
-    spins_tw:    9,
-    stns_tw:     10,
-    avg_spins:   11,
-    mb_cht:      12,
-    rk:          13,
-    peak:        14,
-    bb_sj:       15,
-    freq_atd:    16,
-    imp_atd:     17
+    spins_tw:    6,
+    spins_atd:   7,
+    streams_ca:  8,
+    streams_van: 9,
+    nat_spins_tw: 10,
+    stns_tw:     11,
+    avg_spins:   12,
+    mb_cht:      13,
+    rk:          14,
+    peak:        15,
+    bb_sj:       16,
+    freq_atd:    17,
+    imp_atd:     18
   };
 
   // Custom sort order for TW category
@@ -106,8 +107,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const textCols = { artist: COL.artist, title: COL.title };
       const numCols  = {
         weeks: COL.weeks,
-        spins_atd: COL.spins_atd, streams_ca: COL.streams_ca, streams_van: COL.streams_van,
-        spins_tw: COL.spins_tw, stns_tw: COL.stns_tw, avg_spins: COL.avg_spins,
+        spins_tw: COL.spins_tw, spins_atd: COL.spins_atd, streams_ca: COL.streams_ca, streams_van: COL.streams_van,
+        nat_spins_tw: COL.nat_spins_tw, stns_tw: COL.stns_tw, avg_spins: COL.avg_spins,
         mb_cht: COL.mb_cht, rk: COL.rk, peak: COL.peak,
         bb_sj: COL.bb_sj, freq_atd: COL.freq_atd, imp_atd: COL.imp_atd
       };
@@ -193,6 +194,10 @@ document.addEventListener('DOMContentLoaded', function () {
             // the saved value is explicitly non-empty; avoids clearing it with
             // empty values from state saved before the CAT field was introduced.
             if (catSel && stateMap[k].cat) catSel.value = stateMap[k].cat;
+            // Restore green Rk highlight when it was set on save
+            if (stateMap[k].rk_green && row.cells[COL.rk]) {
+              row.cells[COL.rk].classList.add('rc-rk-up');
+            }
           }
         });
         initialSort();
@@ -210,22 +215,24 @@ document.addEventListener('DOMContentLoaded', function () {
     const stateRows = Array.from(tbody.rows).map(row => ({
       tw:              selectValue(row, COL.tw),
       nw:              selectValue(row, COL.nw),
-      artist:          row.cells[COL.artist]?.textContent.trim()      ?? '',
-      title:           row.cells[COL.title]?.textContent.trim()       ?? '',
-      weeks:           row.cells[COL.weeks]?.textContent.trim()       ?? '',
+      artist:          row.cells[COL.artist]?.textContent.trim()         ?? '',
+      title:           row.cells[COL.title]?.textContent.trim()          ?? '',
+      weeks:           row.cells[COL.weeks]?.textContent.trim()          ?? '',
       cat:             selectValue(row, COL.cat),
-      'Spins ATD':     row.cells[COL.spins_atd]?.textContent.trim()   ?? '',
-      '#Streams CA':   row.cells[COL.streams_ca]?.textContent.trim()  ?? '',
-      '#Streams Van':  row.cells[COL.streams_van]?.textContent.trim() ?? '',
-      '#Spins TW':     row.cells[COL.spins_tw]?.textContent.trim()    ?? '',
-      '#Stns TW':      row.cells[COL.stns_tw]?.textContent.trim()     ?? '',
-      'Avg Spins':     row.cells[COL.avg_spins]?.textContent.trim()   ?? '',
-      'MB Cht':        row.cells[COL.mb_cht]?.textContent.trim()      ?? '',
-      'Rk':            row.cells[COL.rk]?.textContent.trim()          ?? '',
-      'Peak':          row.cells[COL.peak]?.textContent.trim()        ?? '',
-      'BB SJ Chart':   row.cells[COL.bb_sj]?.textContent.trim()      ?? '',
-      'Freq/Listen ATD': row.cells[COL.freq_atd]?.textContent.trim()  ?? '',
-      'Impres ATD':    row.cells[COL.imp_atd]?.textContent.trim()     ?? '',
+      'Spins TW':      row.cells[COL.spins_tw]?.textContent.trim()       ?? '',
+      'Spins ATD':     row.cells[COL.spins_atd]?.textContent.trim()      ?? '',
+      '#Streams CA':   row.cells[COL.streams_ca]?.textContent.trim()     ?? '',
+      '#Streams Van':  row.cells[COL.streams_van]?.textContent.trim()    ?? '',
+      '#Spins TW':     row.cells[COL.nat_spins_tw]?.textContent.trim()   ?? '',
+      '#Stns TW':      row.cells[COL.stns_tw]?.textContent.trim()        ?? '',
+      'Avg Spins':     row.cells[COL.avg_spins]?.textContent.trim()      ?? '',
+      'MB Cht':        row.cells[COL.mb_cht]?.textContent.trim()         ?? '',
+      'Rk':            row.cells[COL.rk]?.textContent.trim()             ?? '',
+      'Peak':          row.cells[COL.peak]?.textContent.trim()           ?? '',
+      'BB SJ Chart':   row.cells[COL.bb_sj]?.textContent.trim()         ?? '',
+      'Freq/Listen ATD': row.cells[COL.freq_atd]?.textContent.trim()     ?? '',
+      'Impres ATD':    row.cells[COL.imp_atd]?.textContent.trim()        ?? '',
+      rk_green:        row.cells[COL.rk]?.classList.contains('rc-rk-up') ?? false,
     }));
 
     const metaElem = document.getElementById('rc-meta-line');
@@ -295,8 +302,8 @@ document.addEventListener('DOMContentLoaded', function () {
     finalRows.push(...others, ...noCategory);
 
     // Header rows matching final-output-example.csv layout
-    const h1 = ['','','','','','','Spins','OD Streams','','National','','','Chart Info','','','','',''];
-    const h2 = ['TW','NW','Artist','Title','WEEKS','CAT','ATD',
+    const h1 = ['','','','','','','Spins','','OD Streams','','National','','','Chart Info','','','','',''];
+    const h2 = ['TW','NW','Artist','Title','WEEKS','CAT','TW','ATD',
                 '#Streams CA','#Streams Van','#Spins TW','#Stns TW','Avg Spins',
                 'MB Cht','Rk','Peak','BB SJ Chart','Freq/Listen ATD','Impres ATD'];
 
@@ -359,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
     addTd(title);
     addTd(weeks);
     addSelTd('CAT[]', 'rc-sel-cat', CAT_VALS);
-    // Remaining data columns (blank)
+    // Remaining data columns (blank) – count starts after the 6 select/text cols above
     for (let i = 6; i < Object.keys(COL).length; i++) addTd('');
 
     tbody.appendChild(tr);

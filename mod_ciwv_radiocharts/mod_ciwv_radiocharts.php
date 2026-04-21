@@ -14,6 +14,14 @@ if ($customPath !== '') {
     $dataDir = JPATH_ROOT . '/' . $customPath;
 }
 $allowedTypes = (array) $params->get('allowed_csv_types', array_keys(ModCiwvRadiochartsHelper::$csvNames));
+// Map legacy option values saved before the csvNames refactor.
+// Old 'national' → new 'national_sj' + 'national_ac'; old 'streaming_station' removed (no longer a source).
+$legacyMap = ['national' => ['national_sj', 'national_ac'], 'streaming_station' => []];
+foreach ($legacyMap as $oldKey => $newKeys) {
+    if (in_array($oldKey, $allowedTypes, true)) {
+        $allowedTypes = array_merge(array_diff($allowedTypes, [$oldKey]), $newKeys);
+    }
+}
 
 // ── Handle upload ─────────────────────────────────────────────────────────────
 $uploadResult = null;
@@ -132,24 +140,26 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
     $rows = [];
     foreach ((array) $dbState as $entry) {
         $rows[] = [
-            'TW'             => $entry['tw']             ?? '',
-            'NW'             => $entry['nw']             ?? '',
-            'Artist'         => $entry['artist']         ?? '',
-            'Title'          => $entry['title']          ?? '',
-            'WEEKS'          => $entry['weeks']          ?? '',
-            'CAT'            => $entry['cat']            ?? '',
-            'Spins ATD'      => $entry['Spins ATD']      ?? '',
-            '#Streams CA'    => $entry['#Streams CA']    ?? '',
-            '#Streams Van'   => $entry['#Streams Van']   ?? '',
-            '#Spins TW'      => $entry['#Spins TW']      ?? '',
-            '#Stns TW'       => $entry['#Stns TW']       ?? '',
-            'Avg Spins'      => $entry['Avg Spins']      ?? '',
-            'MB Cht'         => $entry['MB Cht']         ?? '',
-            'Rk'             => $entry['Rk']             ?? '',
-            'Peak'           => $entry['Peak']           ?? '',
-            'BB SJ Chart'    => $entry['BB SJ Chart']    ?? '',
-            'Freq/Listen ATD'=> $entry['Freq/Listen ATD']?? '',
-            'Impres ATD'     => $entry['Impres ATD']     ?? '',
+            'TW'              => $entry['tw']              ?? '',
+            'NW'              => $entry['nw']              ?? '',
+            'Artist'          => $entry['artist']          ?? '',
+            'Title'           => $entry['title']           ?? '',
+            'WEEKS'           => $entry['weeks']           ?? '',
+            'CAT'             => $entry['cat']             ?? '',
+            'Spins TW'        => $entry['Spins TW']        ?? '',
+            'Spins ATD'       => $entry['Spins ATD']       ?? '',
+            '#Streams CA'     => $entry['#Streams CA']     ?? '',
+            '#Streams Van'    => $entry['#Streams Van']    ?? '',
+            '#Spins TW'       => $entry['#Spins TW']       ?? '',
+            '#Stns TW'        => $entry['#Stns TW']        ?? '',
+            'Avg Spins'       => $entry['Avg Spins']       ?? '',
+            'MB Cht'          => $entry['MB Cht']          ?? '',
+            'Rk'              => $entry['Rk']              ?? '',
+            'Peak'            => $entry['Peak']            ?? '',
+            'BB SJ Chart'     => $entry['BB SJ Chart']     ?? '',
+            'Freq/Listen ATD' => $entry['Freq/Listen ATD'] ?? '',
+            'Impres ATD'      => $entry['Impres ATD']      ?? '',
+            'RkGreen'         => (bool) ($entry['rk_green'] ?? false),
         ];
     }
     $meta      = ['report' => $metaLine ?: ('Saved week: ' . $selectedWeek)];
