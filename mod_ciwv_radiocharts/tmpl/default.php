@@ -12,20 +12,35 @@ $twCats  = ModCiwvRadiochartsHelper::$twCategories;
 $nwCats  = ModCiwvRadiochartsHelper::$nwCategories;
 $catOpts = ModCiwvRadiochartsHelper::$catOptions;
 
-// Build TW/NW <option> lists once for reuse
-$twOptions = '<option value=""></option>';
-foreach ($twCats as $cat) {
-    $twOptions .= '<option value="' . htmlspecialchars($cat) . '">' . htmlspecialchars($cat) . '</option>';
-}
+// Build NW <option> list once for reuse
 $nwOptions = '<option value=""></option>';
 foreach ($nwCats as $cat) {
     $nwOptions .= '<option value="' . htmlspecialchars($cat) . '">' . htmlspecialchars($cat) . '</option>';
 }
-// CAT/CODE dropdown options
-$catOptions = '<option value=""></option>';
-foreach ($catOpts as $opt) {
-    $catOptions .= '<option value="' . htmlspecialchars($opt) . '">' . htmlspecialchars($opt) . '</option>';
-}
+
+// Pre-build option HTML maps keyed by selected value for O(1) lookup per row.
+// $map[''] = unselected option list; $map[$v] = list with $v pre-selected.
+$buildOptionsMap = function (array $values): array {
+    $base = '<option value=""></option>';
+    foreach ($values as $v) {
+        $esc   = htmlspecialchars($v);
+        $base .= '<option value="' . $esc . '">' . $esc . '</option>';
+    }
+    $map = ['' => $base];
+    foreach ($values as $selected) {
+        $html = '<option value=""></option>';
+        foreach ($values as $v) {
+            $esc  = htmlspecialchars($v);
+            $sel  = ($v === $selected) ? ' selected' : '';
+            $html .= '<option value="' . $esc . '"' . $sel . '>' . $esc . '</option>';
+        }
+        $map[$selected] = $html;
+    }
+    return $map;
+};
+
+$twOptionsMap  = $buildOptionsMap($twCats);
+$catOptionsMap = $buildOptionsMap($catOpts);
 ?>
 <?php if (!empty($meta['report'])): ?>
 <div id="rc-meta-line"<?= ($selectedWeek !== 'current' ? ' style="color:red;"' : '') ?>>
@@ -137,12 +152,12 @@ foreach ($catOpts as $opt) {
       <tbody>
         <?php foreach ($rows as $row): ?>
         <tr>
-          <td><select name="TW[]" class="rc-sel-tw"><?= $twOptions ?></select></td>
+          <td><select name="TW[]" class="rc-sel-tw"><?= $twOptionsMap[$row['TW'] ?? ''] ?? $twOptionsMap[''] ?></select></td>
           <td><select name="NW[]" class="rc-sel-nw"><?= $nwOptions ?></select></td>
           <td><?= htmlspecialchars($row['Artist'] ?? '') ?></td>
           <td><?= htmlspecialchars($row['Title'] ?? '') ?></td>
           <td><?= htmlspecialchars((string) ($row['WEEKS'] ?? '')) ?></td>
-          <td><select name="CAT[]" class="rc-sel-cat"><?= $catOptions ?></select></td>
+          <td><select name="CAT[]" class="rc-sel-cat"><?= $catOptionsMap[$row['CAT'] ?? ''] ?? $catOptionsMap[''] ?></select></td>
           <td><?= htmlspecialchars((string) ($row['Spins ATD'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['#Streams CA'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['#Streams Van'] ?? '')) ?></td>
