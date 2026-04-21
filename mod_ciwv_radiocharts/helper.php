@@ -87,6 +87,46 @@ class ModCiwvRadiochartsHelper
         return $n1 === $n2;
     }
 
+    /**
+     * Loose artist match based on the primary artist's last name (last significant
+     * word, ignoring honorific suffixes such as JR/SR/II/III).  Returns true when
+     * both surnames are identical or differ by at most one edit, providing a
+     * reliable safety-check for cases where the full-name comparison fails due to
+     * initials (GM vs GABRIEL MARK) or minor typos (BOYNTON vs BOYTON).
+     *
+     * Intentionally ignores featured artists so that
+     * "CORY WONG" matches "CORY WONG/STEPHEN DAY", etc.
+     */
+    public static function surnameMatch($a1, $a2)
+    {
+        $surname = function ($s) {
+            $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower(trim($s)));
+            // Strip featured-artist clause first
+            $s = preg_replace('/\s*(feat\.?|ft\.?|featuring|f\/)\s*.+$/i', '', $s);
+            // Take only the primary artist (segment before first / or ,)
+            $parts = preg_split('/\s*[\/,]\s*/', $s, 2);
+            $primary = trim($parts[0] ?? $s);
+            $words = preg_split('/\s+/', $primary);
+            $words = array_values(array_filter($words));
+            // Drop trailing honorific suffixes (jr, sr, ii, iii, iv)
+            $honorifics = ['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv'];
+            while (!empty($words) && in_array(rtrim(end($words), '.'), $honorifics, true)) {
+                array_pop($words);
+            }
+            if (empty($words)) {
+                return '';
+            }
+            return rtrim(end($words), '.');
+        };
+        $s1 = $surname($a1);
+        $s2 = $surname($a2);
+        // Require at least 3 chars to avoid spurious matches on initials
+        if (strlen($s1) < 3 || strlen($s2) < 3) {
+            return false;
+        }
+        return levenshtein($s1, $s2) <= 1;
+    }
+
     // ── CSV parsers ──────────────────────────────────────────────────────────
 
     /**
@@ -536,7 +576,8 @@ class ModCiwvRadiochartsHelper
             }
             foreach ($streamingIdx as $sKey => $sVal) {
                 [$sa, $st] = explode('|', $sKey . '|', 2);
-                if (self::artistsMatch($artist, $sa) && self::titlesMatch($title, $st)) {
+                if (self::titlesMatch($title, $st)
+                    && (self::artistsMatch($artist, $sa) || self::surnameMatch($artist, $sa))) {
                     return $sVal;
                 }
             }
@@ -550,7 +591,8 @@ class ModCiwvRadiochartsHelper
                 return $mmData[$key];
             }
             foreach ($mmData as $mKey => $mVal) {
-                if (self::artistsMatch($artist, $mVal['artist']) && self::titlesMatch($title, $mVal['title'])) {
+                if (self::titlesMatch($title, $mVal['title'])
+                    && (self::artistsMatch($artist, $mVal['artist']) || self::surnameMatch($artist, $mVal['artist']))) {
                     return $mVal;
                 }
             }
@@ -566,7 +608,8 @@ class ModCiwvRadiochartsHelper
             foreach ($nationalIdx as $nKey => $nVal) {
                 $nArtist = $nVal['Artist'] ?? '';
                 $nTitle  = $nVal['Title'] ?? '';
-                if (self::artistsMatch($artist, $nArtist) && self::titlesMatch($title, $nTitle)) {
+                if (self::titlesMatch($title, $nTitle)
+                    && (self::artistsMatch($artist, $nArtist) || self::surnameMatch($artist, $nArtist))) {
                     return $nVal;
                 }
             }
@@ -658,6 +701,9 @@ class ModCiwvRadiochartsHelper
 
         $final        = [];
         $localKeysSet = [];
+        // Tracks [artist, title] of every row already added, used for fuzzy
+        // cross-source deduplication in the secondary and tertiary passes.
+        $localSongs   = [];
 
         // --- Primary: Station Playlist songs ---
         foreach ($playlist as $pl) {
@@ -668,6 +714,7 @@ class ModCiwvRadiochartsHelper
             }
             $key              = self::normalize($artist, $title);
             $localKeysSet[$key] = true;
+            $localSongs[]       = [$artist, $title];
 
             $mm  = $findMM($artist, $title);
             $nat = $findNational($artist, $title);
@@ -681,9 +728,22 @@ class ModCiwvRadiochartsHelper
             if (isset($localKeysSet[$key])) {
                 continue;
             }
-            $artist          = $mm['artist'];
-            $title           = $mm['title'];
+            $artist = $mm['artist'];
+            $title  = $mm['title'];
+            // Fuzzy dedup: skip if already added under a different artist/title variant
+            $dup = false;
+            foreach ($localSongs as [$la, $lt]) {
+                if (self::titlesMatch($title, $lt)
+                    && (self::artistsMatch($artist, $la) || self::surnameMatch($artist, $la))) {
+                    $dup = true;
+                    break;
+                }
+            }
+            if ($dup) {
+                continue;
+            }
             $localKeysSet[$key] = true;
+            $localSongs[]       = [$artist, $title];
             $nat = $findNational($artist, $title);
             $s   = $findStreaming($artist, $title);
             $final[] = $buildRow($artist, $title, null, $mm, $nat, $s);
@@ -694,9 +754,22 @@ class ModCiwvRadiochartsHelper
             if (isset($localKeysSet[$key])) {
                 continue;
             }
-            $artist          = $nat['Artist'] ?? '';
-            $title           = $nat['Title'] ?? '';
+            $artist = $nat['Artist'] ?? '';
+            $title  = $nat['Title'] ?? '';
+            // Fuzzy dedup: skip if already added under a different artist/title variant
+            $dup = false;
+            foreach ($localSongs as [$la, $lt]) {
+                if (self::titlesMatch($title, $lt)
+                    && (self::artistsMatch($artist, $la) || self::surnameMatch($artist, $la))) {
+                    $dup = true;
+                    break;
+                }
+            }
+            if ($dup) {
+                continue;
+            }
             $localKeysSet[$key] = true;
+            $localSongs[]       = [$artist, $title];
             $s = $findStreaming($artist, $title);
             $final[] = $buildRow($artist, $title, null, null, $nat, $s);
         }
