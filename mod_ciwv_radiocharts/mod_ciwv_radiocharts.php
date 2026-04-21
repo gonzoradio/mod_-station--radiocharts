@@ -14,6 +14,14 @@ if ($customPath !== '') {
     $dataDir = JPATH_ROOT . '/' . $customPath;
 }
 $allowedTypes = (array) $params->get('allowed_csv_types', array_keys(ModCiwvRadiochartsHelper::$csvNames));
+// Map legacy option values saved before the csvNames refactor.
+// Old 'national' → new 'national_sj' + 'national_ac'; old 'streaming_station' removed (no longer a source).
+$legacyMap = ['national' => ['national_sj', 'national_ac'], 'streaming_station' => []];
+foreach ($legacyMap as $oldKey => $newKeys) {
+    if (in_array($oldKey, $allowedTypes, true)) {
+        $allowedTypes = array_merge(array_diff($allowedTypes, [$oldKey]), $newKeys);
+    }
+}
 
 // ── Handle upload ─────────────────────────────────────────────────────────────
 $uploadResult = null;

@@ -48,9 +48,9 @@
                     description="Select which CSV upload types to accept."
                     multiple="true"
                 >
-                    <option value="national">National Playlist</option>
+                    <option value="national_sj">NationalPlaylist_SJ (Smooth Jazz)</option>
+                    <option value="national_ac">NationalPlaylist_AC (Mainstream AC)</option>
                     <option value="station">Station Playlist</option>
-                    <option value="streaming_station">Streaming Data (Station / National)</option>
                     <option value="streaming_market">Streaming Data (Market)</option>
                     <option value="musicmaster">Music Master CSV</option>
                     <option value="billboard">Billboard Chart</option>
