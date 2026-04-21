@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" version="4.0" group="system" method="upgrade">
+    <name>plg_system_radiocharts</name>
+    <author>Your Name/Team</author>
+    <version>1.0.0</version>
+    <description>Radio Charts System Plugin</description>
+    <files>
+        <filename plugin="radiocharts">radiocharts.php</filename>
+        <filename>radiocharts.xml</filename>
+    </files>
+</extension>
