@@ -267,6 +267,23 @@ Leave empty until we learn more. I don not know how this data is calculated.
 . . . . . . .
 
 
+**NEW** Luminate Streaming Source csv example
+
+File location: data/Streaming_example.csv
+
+This new csv source shows streaming data without the 8 rows of data for each song.
+In this new csv each song is on it's own row.
+
+1:1 - Title
+1:2 - Artist
+1:14 - National Streams TW
+1:15 - % Change (since last week)
+1:18 - Local Market Stream TW
+1:19 - % Change - Market
+
+
+. . . . . . . .
+
 LUMINATE STATION STREAMING DATA CSV EXAMPLE
 
 Data File Location:
