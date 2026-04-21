@@ -6,7 +6,7 @@ use Joomla\CMS\Uri\Uri;
 
 $doc = Factory::getDocument();
 $doc->addStyleSheet(Uri::root() . 'modules/mod_ciwv_radiocharts/media/style.css');
-$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=3');
+$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=4');
 
 $twCats  = ModCiwvRadiochartsHelper::$twCategories;
 $nwCats  = ModCiwvRadiochartsHelper::$nwCategories;
@@ -111,14 +111,76 @@ $catOptionsMap = $buildOptionsMap($catOpts);
     </select>
   </label>
 
-  <!-- Manual row add -->
-  <span id="rc-manual-row-add">
-    Artist: <input type="text" id="rc-manual-artist" style="width:120px;">
-    Title:  <input type="text" id="rc-manual-title"  style="width:140px;">
-    Weeks:  <input type="text" id="rc-manual-weeks"  style="width:40px;">
-    <button id="rc-add-manual-row">Add Row</button>
-  </span>
 </div>
+
+<?php if ($selectedWeek !== 'current'): ?>
+<!-- Row editor (visible for saved weeks only) -->
+<div id="rc-row-editor">
+  <div class="rc-row-editor-scroll">
+    <table class="rc-row-editor-table">
+      <thead>
+        <tr>
+          <th colspan="2">Category</th>
+          <th></th><th></th><th></th><th></th>
+          <th colspan="2">Spins</th>
+          <th colspan="2">OD Streams</th>
+          <th colspan="3">National</th>
+          <th colspan="6">Chart Info</th>
+        </tr>
+        <tr>
+          <th>TW</th>
+          <th>NW</th>
+          <th>Artist</th>
+          <th>Title</th>
+          <th>WEEKS</th>
+          <th>CAT</th>
+          <th>TW</th>
+          <th>ATD</th>
+          <th>#CA</th>
+          <th>#Van</th>
+          <th>#Spins TW</th>
+          <th>#Stns TW</th>
+          <th>Avg</th>
+          <th>MB Cht</th>
+          <th>Rk</th>
+          <th>Peak</th>
+          <th>BB SJ</th>
+          <th>Freq ATD</th>
+          <th>Imp ATD</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><select id="re-tw"><?= $twOptionsMap[''] ?></select></td>
+          <td><select id="re-nw"><?= $nwOptions ?></select></td>
+          <td><input type="text" id="re-artist" style="width:120px;"></td>
+          <td><input type="text" id="re-title" style="width:140px;"></td>
+          <td><input type="text" id="re-weeks" style="width:40px;"></td>
+          <td><select id="re-cat"><?= $catOptionsMap[''] ?></select></td>
+          <td><input type="text" id="re-spins-tw" style="width:55px;"></td>
+          <td><input type="text" id="re-spins-atd" style="width:65px;"></td>
+          <td><input type="text" id="re-streams-ca" style="width:70px;"></td>
+          <td><input type="text" id="re-streams-van" style="width:70px;"></td>
+          <td><input type="text" id="re-nat-spins-tw" style="width:65px;"></td>
+          <td><input type="text" id="re-stns-tw" style="width:55px;"></td>
+          <td><input type="text" id="re-avg-spins" style="width:55px;"></td>
+          <td><input type="text" id="re-mb-cht" style="width:55px;"></td>
+          <td><input type="text" id="re-rk" style="width:40px;"></td>
+          <td><input type="text" id="re-peak" style="width:40px;"></td>
+          <td><input type="text" id="re-bb-sj" style="width:50px;"></td>
+          <td><input type="text" id="re-freq-atd" style="width:70px;"></td>
+          <td><input type="text" id="re-imp-atd" style="width:70px;"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="rc-row-editor-actions">
+    <button id="rc-add-row">Add Row</button>
+    <button id="rc-update-row">Update Row</button>
+    <span id="rc-editor-status"></span>
+  </div>
+</div>
+<?php endif; ?>
 
 <!-- Dashboard table -->
 <div class="rc-dashboard-module">

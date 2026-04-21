@@ -121,3 +121,72 @@
     color: #2e7d32;
     font-weight: bold;
 }
+
+/* ── Row editor (shown for saved weeks only) ─────────────────────────────── */
+
+#rc-row-editor {
+    margin-bottom: 0.5em;
+    border-left: 4px solid #1565c0;
+    background: #e8f0fe;
+    padding: 6px 0 4px 0;
+}
+
+.rc-row-editor-scroll {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.rc-row-editor-table {
+    border-collapse: collapse;
+    width: max-content;
+    min-width: 100%;
+}
+
+.rc-row-editor-table th,
+.rc-row-editor-table td {
+    border: 1px solid #90a4ae;
+    padding: 3px 6px;
+    white-space: nowrap;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 0.9em;
+}
+
+.rc-row-editor-table thead th {
+    background: #bbdefb;
+    font-weight: bold;
+    text-align: center;
+}
+
+.rc-row-editor-table tbody td {
+    background: #fff;
+}
+
+.rc-row-editor-table input[type="text"],
+.rc-row-editor-table select {
+    font-size: 0.85em;
+    padding: 1px 2px;
+    box-sizing: border-box;
+}
+
+.rc-row-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6em;
+    padding: 4px 8px;
+}
+
+.rc-row-editor-actions button {
+    padding: 3px 10px;
+}
+
+#rc-editor-status {
+    font-size: 0.9em;
+    font-style: italic;
+    color: #1565c0;
+}
+
+/* Highlight tbody rows as clickable when the row editor is present */
+#rc-row-editor ~ .rc-dashboard-module .rc-dashboard-table tbody tr:hover {
+    background: #fff9c4;
+    cursor: pointer;
+}

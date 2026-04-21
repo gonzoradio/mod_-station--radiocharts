@@ -1,4 +1,4 @@
-/* mod_ciwv_radiocharts – dashboard.js v3 */
+/* mod_ciwv_radiocharts – dashboard.js v4 */
 document.addEventListener('DOMContentLoaded', function () {
 
   // ── Column index map (must match tmpl/default.php column order) ──────────
@@ -334,7 +334,9 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
   });
 
-  // ── Manual Add Row ─────────────────────────────────────────────────────────
+  // ── Row Editor ─────────────────────────────────────────────────────────────
+
+  // Build a <select> element (reused by Add Row to create table cells with selects)
   function makeSelect(name, cssClass, vals) {
     const sel = document.createElement('select');
     sel.name      = name;
@@ -347,33 +349,127 @@ document.addEventListener('DOMContentLoaded', function () {
     return sel;
   }
 
-  document.getElementById('rc-add-manual-row')?.addEventListener('click', function () {
-    const artist = document.getElementById('rc-manual-artist')?.value.trim() || '';
-    const title  = document.getElementById('rc-manual-title')?.value.trim()  || '';
-    const weeks  = document.getElementById('rc-manual-weeks')?.value.trim()  || '';
-    if (!artist || !title) { alert('Artist and Title are required.'); return; }
+  // Ordered map of editor field IDs → { column index, whether it is a <select> }
+  const EDITOR_FIELDS = [
+    { id: 're-tw',           col: COL.tw,           isSelect: true  },
+    { id: 're-nw',           col: COL.nw,           isSelect: true  },
+    { id: 're-artist',       col: COL.artist,       isSelect: false },
+    { id: 're-title',        col: COL.title,        isSelect: false },
+    { id: 're-weeks',        col: COL.weeks,        isSelect: false },
+    { id: 're-cat',          col: COL.cat,          isSelect: true  },
+    { id: 're-spins-tw',     col: COL.spins_tw,     isSelect: false },
+    { id: 're-spins-atd',    col: COL.spins_atd,    isSelect: false },
+    { id: 're-streams-ca',   col: COL.streams_ca,   isSelect: false },
+    { id: 're-streams-van',  col: COL.streams_van,  isSelect: false },
+    { id: 're-nat-spins-tw', col: COL.nat_spins_tw, isSelect: false },
+    { id: 're-stns-tw',      col: COL.stns_tw,      isSelect: false },
+    { id: 're-avg-spins',    col: COL.avg_spins,    isSelect: false },
+    { id: 're-mb-cht',       col: COL.mb_cht,       isSelect: false },
+    { id: 're-rk',           col: COL.rk,           isSelect: false },
+    { id: 're-peak',         col: COL.peak,         isSelect: false },
+    { id: 're-bb-sj',        col: COL.bb_sj,        isSelect: false },
+    { id: 're-freq-atd',     col: COL.freq_atd,     isSelect: false },
+    { id: 're-imp-atd',      col: COL.imp_atd,      isSelect: false },
+  ];
 
+  function clearEditor() {
+    EDITOR_FIELDS.forEach(f => {
+      const el = document.getElementById(f.id);
+      if (el) el.value = '';
+    });
+    const status = document.getElementById('rc-editor-status');
+    if (status) status.textContent = '';
+  }
+
+  // Build a new <tr> from the current editor field values
+  function buildRowFromEditor() {
+    const tr = document.createElement('tr');
+    EDITOR_FIELDS.forEach(f => {
+      const td  = document.createElement('td');
+      const el  = document.getElementById(f.id);
+      const val = el ? el.value.trim() : '';
+      if (f.isSelect) {
+        const selName = f.id === 're-tw' ? 'TW[]' : f.id === 're-nw' ? 'NW[]' : 'CAT[]';
+        const selCls  = f.id === 're-tw' ? 'rc-sel-tw' : f.id === 're-nw' ? 'rc-sel-nw' : 'rc-sel-cat';
+        const selVals = f.id === 're-tw' ? TW_VALS : f.id === 're-nw' ? NW_VALS : CAT_VALS;
+        const sel     = makeSelect(selName, selCls, selVals);
+        sel.value     = val;
+        td.appendChild(sel);
+      } else {
+        td.textContent = val;
+      }
+      tr.appendChild(td);
+    });
+    return tr;
+  }
+
+  // Update every cell of an existing row from the current editor values
+  function updateRowInPlace(tr) {
+    EDITOR_FIELDS.forEach(f => {
+      const td  = tr.cells[f.col];
+      if (!td) return;
+      const el  = document.getElementById(f.id);
+      const val = el ? el.value.trim() : '';
+      if (f.isSelect) {
+        const sel = td.querySelector('select');
+        if (sel) sel.value = val;
+      } else {
+        td.textContent = val;
+        // Clear any stale highlight on the Rk cell; user can re-save to restore it
+        if (f.col === COL.rk) td.classList.remove('rc-rk-up');
+      }
+    });
+  }
+
+  // Click-to-edit: populate editor from the clicked tbody row
+  const editorEl = document.getElementById('rc-row-editor');
+  const tbodyEl  = getTBody();
+  if (editorEl && tbodyEl) {
+    tbodyEl.addEventListener('click', function (e) {
+      const row = e.target.closest('tr');
+      if (!row || row.parentElement !== tbodyEl) return;
+      EDITOR_FIELDS.forEach(f => {
+        const el = document.getElementById(f.id);
+        if (el) el.value = selectValue(row, f.col);
+      });
+      const artist = document.getElementById('re-artist')?.value || '';
+      const title  = document.getElementById('re-title')?.value  || '';
+      const status = document.getElementById('rc-editor-status');
+      if (status) status.textContent = 'Editing: ' + artist + ' \u2013 ' + title;
+    });
+  }
+
+  // Add Row: append a brand-new row built from editor values
+  document.getElementById('rc-add-row')?.addEventListener('click', function () {
+    const artist = document.getElementById('re-artist')?.value.trim() || '';
+    const title  = document.getElementById('re-title')?.value.trim()  || '';
+    if (!artist || !title) { alert('Artist and Title are required.'); return; }
     const tbody = getTBody();
     if (!tbody) return;
+    tbody.appendChild(buildRowFromEditor());
+    clearEditor();
+  });
 
-    const tr = document.createElement('tr');
-    const addTd = v => { const td = document.createElement('td'); td.textContent = v; tr.appendChild(td); return td; };
-    const addSelTd = (name, cls, vals) => { const td = document.createElement('td'); td.appendChild(makeSelect(name, cls, vals)); tr.appendChild(td); return td; };
-
-    addSelTd('TW[]', 'rc-sel-tw', TW_VALS);
-    addSelTd('NW[]', 'rc-sel-nw', NW_VALS);
-    addTd(artist);
-    addTd(title);
-    addTd(weeks);
-    addSelTd('CAT[]', 'rc-sel-cat', CAT_VALS);
-    // Remaining data columns (blank) – count starts after the 6 select/text cols above
-    for (let i = 6; i < Object.keys(COL).length; i++) addTd('');
-
-    tbody.appendChild(tr);
-
-    document.getElementById('rc-manual-artist').value = '';
-    document.getElementById('rc-manual-title').value  = '';
-    document.getElementById('rc-manual-weeks').value  = '';
+  // Update Row: find an existing row by Artist+Title and replace its cell values
+  document.getElementById('rc-update-row')?.addEventListener('click', function () {
+    const artist = document.getElementById('re-artist')?.value.trim() || '';
+    const title  = document.getElementById('re-title')?.value.trim()  || '';
+    if (!artist || !title) { alert('Artist and Title are required.'); return; }
+    const tbody = getTBody();
+    if (!tbody) return;
+    const targetKey = normalizeKey(artist, title);
+    let matchRow = null;
+    Array.from(tbody.rows).forEach(row => {
+      const rArtist = row.cells[COL.artist]?.textContent.trim() || '';
+      const rTitle  = row.cells[COL.title]?.textContent.trim()  || '';
+      if (normalizeKey(rArtist, rTitle) === targetKey) matchRow = row;
+    });
+    if (!matchRow) {
+      alert('No matching row found for \u201c' + artist + ' \u2013 ' + title + '\u201d. Use Add Row to create a new entry.');
+      return;
+    }
+    updateRowInPlace(matchRow);
+    clearEditor();
   });
 
 });
