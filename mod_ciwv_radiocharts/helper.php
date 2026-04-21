@@ -34,10 +34,13 @@ class ModCiwvRadiochartsHelper
         $t = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $t);
         $a = str_replace('"', '', $a);
         $t = str_replace('"', '', $t);
+        // Strip featured-artist suffix BEFORE converting separators, so that "f/"
+        // (featuring via slash) is caught before "/" is turned into ",".
+        // Period after ft/feat is optional to handle "FT" as well as "FT.".
+        $a = preg_replace('/\s*(feat\.?|ft\.?|featuring|f\/)\s*.+$/i', '', $a);
         $a = preg_replace('/(\s*&\s*|\s*and\s*|,|\s*x\s*|\s*\/\s*)/i', ',', $a);
         $a = preg_replace('/\s+/', ' ', $a);
-        $a = preg_replace('/\s*(feat\.|ft\.|featuring|f\/)\s*.+$/i', '', $a);
-        $t = preg_replace('/\s*(f\/|feat\.|ft\.|featuring)\s*.+$/i', '', $t);
+        $t = preg_replace('/\s*(f\/|feat\.?|ft\.?|featuring)\s*.+$/i', '', $t);
         $t = preg_replace('/\.\.\.$/', '', $t);
         $t = preg_replace('/[\"\'\(\)\[\]\.,!?\-]/', '', $t);
         $a = trim($a, " ,");
@@ -49,8 +52,11 @@ class ModCiwvRadiochartsHelper
     {
         $norm = function ($s) {
             $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower($s));
+            // Strip featured-artist suffix BEFORE converting separators, so that
+            // "f/" is caught before "/" is turned into ",".
+            // Period after ft/feat is optional to handle "FT" as well as "FT.".
+            $s = preg_replace('/\s*(feat\.?|ft\.?|featuring|f\/)\s*.+$/i', '', $s);
             $s = preg_replace('/(\s*&\s*|\s*and\s*|,|\s*x\s*|\s*\/\s*)/i', ',', $s);
-            $s = preg_replace('/\s*(feat\.|ft\.|featuring|f\/)\s*.+$/i', '', $s);
             return array_unique(array_filter(array_map('trim', explode(',', $s))));
         };
         $arr1 = $norm($a1);
@@ -65,7 +71,8 @@ class ModCiwvRadiochartsHelper
     {
         $norm = function ($s) {
             $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', mb_strtolower($s));
-            $s = preg_replace('/\s*(f\/|feat\.|ft\.|featuring).*/i', '', $s);
+            // Period after ft/feat is optional to handle "FT" as well as "FT.".
+            $s = preg_replace('/\s*(f\/|feat\.?|ft\.?|featuring).*/i', '', $s);
             $s = trim(rtrim($s, " .,'\"!?-"));
             return preg_replace('/[\"\'\(\)\[\]\.,!?\-]/', '', $s);
         };
