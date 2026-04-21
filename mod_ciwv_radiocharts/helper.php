@@ -189,6 +189,74 @@ class ModCiwvRadiochartsHelper
     }
 
     /**
+     * National Playlist – Smooth Jazz AC CSV parser.
+     *
+     * Uses the same composite-header structure but overrides Spins_TW and
+     * Stations_On with positional column reads to handle files where the
+     * column label is "Stns" instead of "Stations", or where columns shift.
+     *
+     * Column positions (1-indexed, per Mediabase SJ export format):
+     *   col  9 (index 8) = Spins TW
+     *   col 22 (index 21) = Stations On
+     */
+    public static function parseNationalSjCsv($filename)
+    {
+        return self::parseNationalCsvWithPositions($filename, 8, 21);
+    }
+
+    /**
+     * Internal helper: parse a national CSV with composite headers, then
+     * override Spins_TW and Stations_On from specific zero-based column indices.
+     */
+    private static function parseNationalCsvWithPositions($filename, $spinsCol, $stationsCol)
+    {
+        if (!is_readable($filename)) {
+            return [];
+        }
+        $f = fopen($filename, 'r');
+        if (!$f) {
+            return [];
+        }
+        fgetcsv($f); fgetcsv($f); fgetcsv($f);
+        $sectionHeader = fgetcsv($f);
+        $subHeader     = fgetcsv($f);
+        $keys    = [];
+        $section = '';
+        foreach ($sectionHeader as $i => $sect) {
+            $sect = trim($sect, " \t\n\r\0\x0B\"");
+            if ($sect !== '') {
+                $section = $sect;
+            }
+            $sub = trim($subHeader[$i] ?? '', " \t\n\r\0\x0B\"");
+            if ($section && $sub) {
+                $keys[] = $section . '_' . $sub;
+            } elseif ($section && !$sub) {
+                $keys[] = $section;
+            } elseif (!$section && $sub) {
+                $keys[] = $sub;
+            } else {
+                $keys[] = 'col_' . $i;
+            }
+        }
+        $rows = [];
+        while (($data = fgetcsv($f)) !== false) {
+            if (count(array_filter($data)) === 0) {
+                continue;
+            }
+            $row = [];
+            foreach ($keys as $i => $k) {
+                $row[$k] = $data[$i] ?? '';
+            }
+            // Positional overrides for reliable extraction regardless of header label
+            $row['Spins_TW']    = trim($data[$spinsCol] ?? '');
+            $row['Stations_On'] = trim($data[$stationsCol] ?? '');
+            $rows[] = $row;
+        }
+        fclose($f);
+        return $rows;
+    }
+
+    /**
      * Music Master CSV parser.
      *
      * Returns an associative array keyed by normalize(artist, title), each value:
@@ -551,7 +619,7 @@ class ModCiwvRadiochartsHelper
         $playlist = $stationFile ? self::parseStationPlaylistCsv($stationFile) : [];
 
         // --- National Playlist – Smooth Jazz AC (MB Cht = SJAC, Rk, Peak, RkGreen) ---
-        $nationalSjRows = $nationalSjFile ? self::parseNationalCsv($nationalSjFile) : [];
+        $nationalSjRows = $nationalSjFile ? self::parseNationalSjCsv($nationalSjFile) : [];
         $nationalSjIdx  = [];
         foreach ($nationalSjRows as $nr) {
             $artist = $nr['Artist'] ?? '';
@@ -676,10 +744,13 @@ class ModCiwvRadiochartsHelper
             $streamsCa  = $s['CANADA'] ?? '';
             $streamsVan = $s['MARKET'] ?? '';
 
-            // AC national data – provides #Spins TW and #Stns TW
+            // National spins/stations: SJ chart takes priority (SJAC songs), AC is fallback (CANAC songs)
             $natSpinsTW = '';
             $natStnsOn  = '';
-            if ($natAc) {
+            if ($natSj) {
+                $natSpinsTW = $natSj['Spins_TW'] ?? '';
+                $natStnsOn  = $natSj['Stations_On'] ?? '';
+            } elseif ($natAc) {
                 $natSpinsTW = $natAc['Spins_TW'] ?? '';
                 $natStnsOn  = $natAc['Stations_On'] ?? '';
             }
