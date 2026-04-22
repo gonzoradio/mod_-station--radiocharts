@@ -4,12 +4,12 @@ defined('_JEXEC') or die;
 class ModCiwvRadiochartsHelper
 {
     // Full PD category list, in display/sort order
-    public static $twCategories = ['A1', 'J', 'A2', 'P', 'B', 'C', 'D', 'GOLD', 'PC2', 'PC3', 'HOLD', 'ADD', 'Q', 'OUT'];
+    public static $twCategories = ['A1', 'J', 'A2', 'P', 'B', 'C', 'D', 'GOLD', 'PC', 'PC2', 'PC3', 'HOLD', 'ADD', 'Q', 'OUT'];
 
     // "Next week" categories include question-mark variants
     public static $nwCategories = [
-        'A1', 'J', 'A2', 'P', 'B', 'C', 'D', 'GOLD', 'PC2', 'PC3', 'HOLD', 'ADD', 'Q', 'OUT',
-        'A1?', 'J?', 'A2?', 'P?', 'B?', 'C?', 'D?', 'GOLD?', 'PC2?', 'PC3?', 'Q?', 'OUT?',
+        'A1', 'J', 'A2', 'P', 'B', 'C', 'D', 'GOLD', 'PC', 'PC2', 'PC3', 'HOLD', 'ADD', 'Q', 'OUT',
+        'A1?', 'J?', 'A2?', 'P?', 'B?', 'C?', 'D?', 'GOLD?', 'PC?', 'PC2?', 'PC3?', 'Q?', 'OUT?',
     ];
 
     // CAT/CODE options (Music Master sub-category codes)
@@ -327,7 +327,7 @@ class ModCiwvRadiochartsHelper
 
     /**
      * Map a Music Master category abbreviation to the dashboard TW category.
-     * PC is mapped to PC2 by default; the user can override in the dashboard.
+     * PC is mapped to PC directly, preserving the original category value.
      */
     private static function normaliseMmCategory($mmCat)
     {
@@ -341,7 +341,7 @@ class ModCiwvRadiochartsHelper
             'C'    => 'C',
             'D'    => 'D',
             'GOLD' => 'GOLD',
-            'PC'   => 'PC2',
+            'PC'   => 'PC',
             'PC2'  => 'PC2',
             'PC3'  => 'PC3',
             'HOLD' => 'HOLD',

@@ -1,4 +1,4 @@
-/* mod_ciwv_radiocharts – dashboard.js v4 */
+/* mod_ciwv_radiocharts – dashboard.js v5 */
 document.addEventListener('DOMContentLoaded', function () {
 
   // ── Column index map (must match tmpl/default.php column order) ──────────
@@ -30,12 +30,12 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   // Custom sort order for TW category
-  const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',''];
+  const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',''];
 
   // TW and NW option lists (must match helper.php)
-  const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT'];
-  const NW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',
-                   'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC2?','PC3?','Q?','OUT?'];
+  const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT'];
+  const NW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',
+                   'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC?','PC2?','PC3?','Q?','OUT?'];
   const CAT_VALS = ['','1','2','3','S','PSG','G','F','GS','GP','P','V','T','TG','SP','TS','GT'];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -188,7 +188,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const twSel  = row.querySelector('select.rc-sel-tw');
             const nwSel  = row.querySelector('select.rc-sel-nw');
             const catSel = row.querySelector('select.rc-sel-cat');
-            if (twSel)  twSel.value  = stateMap[k].tw  || '';
+            // Only restore TW from saved state when the CSV didn't supply a value
+            // (PHP pre-selects TW from MusicMaster; saved state should not override it).
+            // This mirrors the PHP prior-week overlay: `if ($row['TW'] === '') $row['TW'] = $prior['tw']`.
+            if (twSel && twSel.value === '') twSel.value = stateMap[k].tw || '';
             if (nwSel)  nwSel.value  = stateMap[k].nw  || '';
             // Only override the PHP-pre-selected CAT (from MusicMaster CSV) when
             // the saved value is explicitly non-empty; avoids clearing it with
@@ -275,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const groups     = {};
     const addsByNW   = {};
     const noCategory = [];
-    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(c => {
+    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(c => {
       groups[c]   = [];
       addsByNW[c] = [];
     });
@@ -296,7 +299,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     const finalRows = [];
-    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(k => {
+    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(k => {
       finalRows.push(...groups[k], ...addsByNW[k]);
     });
     finalRows.push(...others, ...noCategory);
