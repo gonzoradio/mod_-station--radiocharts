@@ -254,6 +254,10 @@ document.addEventListener('DOMContentLoaded', function () {
       'Freq/Listen ATD': row.cells[COL.freq_atd]?.textContent.trim()     ?? '',
       'Impres ATD':    row.cells[COL.imp_atd]?.textContent.trim()        ?? '',
       rk_green:        row.cells[COL.rk]?.classList.contains('rc-rk-up') ?? false,
+      spins_tw_dir:    (row.cells[COL.spins_tw]?.classList.contains('rc-val-up')      ? 'up'
+                     : row.cells[COL.spins_tw]?.classList.contains('rc-val-down')    ? 'down' : ''),
+      nat_spins_tw_dir:(row.cells[COL.nat_spins_tw]?.classList.contains('rc-val-up')  ? 'up'
+                     : row.cells[COL.nat_spins_tw]?.classList.contains('rc-val-down')? 'down' : ''),
     }));
 
     const metaElem = document.getElementById('rc-meta-line');

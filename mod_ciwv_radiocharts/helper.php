@@ -966,17 +966,46 @@ class ModCiwvRadiochartsHelper
                 return ($tf > $lf) === $higherIsBetter ? 'up' : 'down';
             };
 
+            // Helper: convert a CSV +/- delta string to a direction indicator.
+            $dirFromDelta = function ($delta) {
+                $v = str_replace(',', '', trim((string) $delta));
+                if (!is_numeric($v) || (float) $v == 0) {
+                    return '';
+                }
+                return ((float) $v > 0) ? 'up' : 'down';
+            };
+
+            // Station Playlist spins direction: composite key 'Spins_+/-' (col 10, 1-indexed).
+            $spinsTwDir = $pl ? $dirFromDelta($pl['Spins_+/-'] ?? '') : '';
+
+            // National spins direction: sum of SJ (col 11) and AC (col 12) +/- deltas.
+            // Both use the composite key 'Spins_+/-' after the 2-row header parse.
+            // When a song appears on both charts the deltas are combined for a total.
+            $natSpinsDir      = '';
+            $combinedNatDelta = 0.0;
+            $hasNatDelta      = false;
+            foreach ([$natSj, $natAc] as $nat) {
+                if (!$nat) {
+                    continue;
+                }
+                $v = str_replace(',', '', trim($nat['Spins_+/-'] ?? ''));
+                if (is_numeric($v)) {
+                    $combinedNatDelta += (float) $v;
+                    $hasNatDelta = true;
+                }
+            }
+            if ($hasNatDelta && $combinedNatDelta != 0) {
+                $natSpinsDir = $combinedNatDelta > 0 ? 'up' : 'down';
+            }
+
             // CSV-derived direction flags from national chart LW vs TW columns.
             // The composite header keys for the national CSVs are:
-            //   Rank_TW / Rank_LW, Spins_TW / Spins_LW,
-            //   Avg. Station Rotations_TW / Avg. Station Rotations_LW
+            //   Rank_TW / Rank_LW, Avg. Station Rotations_TW / Avg. Station Rotations_LW
             $rkDir       = '';
-            $natSpinsDir = '';
             $avgSpinsDir = '';
             $natForDir   = $natSj ?: $natAc;
             if ($natForDir) {
                 $rkDir       = $wowDir($natForDir['Rank_TW'] ?? '',                      $natForDir['Rank_LW'] ?? '',                      false); // lower rank = better
-                $natSpinsDir = $wowDir($natForDir['Spins_TW'] ?? '',                      $natForDir['Spins_LW'] ?? '',                      true);
                 $avgSpinsDir = $wowDir($natForDir['Avg. Station Rotations_TW'] ?? '', $natForDir['Avg. Station Rotations_LW'] ?? '', true);
             }
 
@@ -1015,7 +1044,7 @@ class ModCiwvRadiochartsHelper
                 'WEEKS'           => $weeks,
                 'CAT'             => $catCode,
                 'Spins TW'        => $spinsTw,
-                'SpinsTwDir'      => '', // filled by DB prior-week comparison in mod_ciwv_radiocharts.php
+                'SpinsTwDir'      => $spinsTwDir,
                 'Spins ATD'       => $spinsAtd,
                 '#Streams CA'     => $streamsCa,
                 'StreamsCaDir'    => '',

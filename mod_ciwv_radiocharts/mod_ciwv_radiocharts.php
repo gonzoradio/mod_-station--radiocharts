@@ -141,8 +141,11 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
                 }
                 $row['NW'] = '';
             }
-            // Station spins TW and streaming: no LW column in those CSVs, use DB prior
-            $row['SpinsTwDir']   = $compareDir($row['Spins TW'],    $prior['Spins TW']    ?? '');
+            // Station spins TW: use CSV +/- direction from $buildRow(); fall back to
+            // DB prior-week comparison only when the CSV did not supply a value.
+            if (($row['SpinsTwDir'] ?? '') === '') {
+                $row['SpinsTwDir'] = $compareDir($row['Spins TW'], $prior['Spins TW'] ?? '');
+            }
             $row['StreamsCaDir'] = $compareDir($row['#Streams CA'],  $prior['#Streams CA'] ?? '');
             $row['StreamsVanDir']= $compareDir($row['#Streams Van'], $prior['#Streams Van']?? '');
             // Fill in DB-based directions for national fields not covered by CSV LW data
@@ -185,19 +188,25 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
         // CanCon: use stored flag (new saves), then fall back to current national CSV lookup
         $isCancon = !empty($entry['cancon']) || isset($canconLookup[$key]);
 
-        // WoW direction flags from DB prior week comparison
-        $spinsTwDir    = '';
+        // WoW direction flags: prefer CSV-derived values saved in the state JSON
+        // (set from the original CSV +/- columns); fall back to DB prior-week
+        // numeric comparison for snapshots saved before these flags were added.
+        $spinsTwDir    = $entry['spins_tw_dir']     ?? '';
+        $natSpinsDir   = $entry['nat_spins_tw_dir'] ?? '';
         $streamsCaDir  = '';
         $streamsVanDir = '';
-        $natSpinsDir   = '';
         $avgSpinsDir   = '';
         $rkDir         = '';
         if (isset($priorMap[$key])) {
             $prior         = $priorMap[$key];
-            $spinsTwDir    = $compareDir($entry['Spins TW']    ?? '', $prior['Spins TW']    ?? '');
+            if ($spinsTwDir === '') {
+                $spinsTwDir = $compareDir($entry['Spins TW'] ?? '', $prior['Spins TW'] ?? '');
+            }
             $streamsCaDir  = $compareDir($entry['#Streams CA']  ?? '', $prior['#Streams CA'] ?? '');
             $streamsVanDir = $compareDir($entry['#Streams Van'] ?? '', $prior['#Streams Van']?? '');
-            $natSpinsDir   = $compareDir($entry['#Spins TW']   ?? '', $prior['#Spins TW']   ?? '');
+            if ($natSpinsDir === '') {
+                $natSpinsDir = $compareDir($entry['#Spins TW'] ?? '', $prior['#Spins TW'] ?? '');
+            }
             $avgSpinsDir   = $compareDir($entry['Avg Spins']   ?? '', $prior['Avg Spins']   ?? '');
             $rkDir         = $compareDir($entry['Rk']          ?? '', $prior['Rk']          ?? '', false);
         }
