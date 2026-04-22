@@ -93,6 +93,27 @@ $getPriorWeekMap = function ($weekDate) use ($db, $stateTable) {
 };
 
 // ── Build dashboard data ──────────────────────────────────────────────────────
+
+// Helper: compute week-over-week direction for a numeric field.
+// Returns 'up', 'down', or '' (no data / no change / non-numeric).
+$compareDir = function ($curr, $priorVal, $higherIsBetter = true) {
+    $c = str_replace(',', '', trim((string) $curr));
+    $p = str_replace(',', '', trim((string) $priorVal));
+    if ($c === '' || $p === '' || !is_numeric($c) || !is_numeric($p)) {
+        return '';
+    }
+    $cf = (float) $c;
+    $pf = (float) $p;
+    if ($cf == $pf) {
+        return '';
+    }
+    return ($cf > $pf) === $higherIsBetter ? 'up' : 'down';
+};
+
+// CanCon lookup from current national CSVs (used as a fallback for saved weeks
+// that predate the `cancon` field being stored in the state JSON).
+$canconLookup = ModCiwvRadiochartsHelper::getCanconLookup($dataDir);
+
 if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, true)) {
     // Build from CSVs
     $data      = ModCiwvRadiochartsHelper::getCombinedRows($dataDir);
@@ -104,7 +125,7 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
         : [null];
     $weekStart = $twStart ?: date('Y-m-d');
 
-    // Overlay TW/NW from prior week
+    // Overlay TW/NW from prior week and apply DB-based WoW direction flags
     $priorMap = $getPriorWeekMap($weekStart);
     foreach ($rows as &$row) {
         $key = ModCiwvRadiochartsHelper::normalize($row['Artist'] ?? '', $row['Title'] ?? '');
@@ -119,6 +140,20 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
                     $row['TW'] = $prior['tw'] ?? '';
                 }
                 $row['NW'] = '';
+            }
+            // Station spins TW and streaming: no LW column in those CSVs, use DB prior
+            $row['SpinsTwDir']   = $compareDir($row['Spins TW'],    $prior['Spins TW']    ?? '');
+            $row['StreamsCaDir'] = $compareDir($row['#Streams CA'],  $prior['#Streams CA'] ?? '');
+            $row['StreamsVanDir']= $compareDir($row['#Streams Van'], $prior['#Streams Van']?? '');
+            // Fill in DB-based directions for national fields not covered by CSV LW data
+            if (($row['NatSpinsTwDir'] ?? '') === '') {
+                $row['NatSpinsTwDir'] = $compareDir($row['#Spins TW'], $prior['#Spins TW'] ?? '');
+            }
+            if (($row['AvgSpinsDir'] ?? '') === '') {
+                $row['AvgSpinsDir'] = $compareDir($row['Avg Spins'], $prior['Avg Spins'] ?? '');
+            }
+            if (($row['RkDir'] ?? '') === '') {
+                $row['RkDir'] = $compareDir($row['Rk'], $prior['Rk'] ?? '', false);
             }
         }
     }
@@ -138,29 +173,69 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
     $dbState  = isset($result['state_json']) ? json_decode($result['state_json'], true) : [];
     $metaLine = $result['meta_line'] ?? null;
 
+    // Prior week map for WoW direction comparison in saved-week view
+    $priorMap = $getPriorWeekMap($selectedWeek);
+
     $rows = [];
     foreach ((array) $dbState as $entry) {
+        $artist = $entry['artist'] ?? '';
+        $title  = $entry['title']  ?? '';
+        $key    = ModCiwvRadiochartsHelper::normalize($artist, $title);
+
+        // CanCon: use stored flag (new saves), then fall back to current national CSV lookup
+        $isCancon = !empty($entry['cancon']) || isset($canconLookup[$key]);
+
+        // WoW direction flags from DB prior week comparison
+        $spinsTwDir    = '';
+        $streamsCaDir  = '';
+        $streamsVanDir = '';
+        $natSpinsDir   = '';
+        $avgSpinsDir   = '';
+        $rkDir         = '';
+        if (isset($priorMap[$key])) {
+            $prior         = $priorMap[$key];
+            $spinsTwDir    = $compareDir($entry['Spins TW']    ?? '', $prior['Spins TW']    ?? '');
+            $streamsCaDir  = $compareDir($entry['#Streams CA']  ?? '', $prior['#Streams CA'] ?? '');
+            $streamsVanDir = $compareDir($entry['#Streams Van'] ?? '', $prior['#Streams Van']?? '');
+            $natSpinsDir   = $compareDir($entry['#Spins TW']   ?? '', $prior['#Spins TW']   ?? '');
+            $avgSpinsDir   = $compareDir($entry['Avg Spins']   ?? '', $prior['Avg Spins']   ?? '');
+            $rkDir         = $compareDir($entry['Rk']          ?? '', $prior['Rk']          ?? '', false);
+        }
+
+        $rkGreen = (bool) ($entry['rk_green'] ?? false);
+        // If direction data is available, prefer it over the legacy rk_green flag
+        if ($rkDir === '') {
+            $rkDir = $rkGreen ? 'up' : '';
+        }
+
         $rows[] = [
             'TW'              => $entry['tw']              ?? '',
             'NW'              => $entry['nw']              ?? '',
-            'Artist'          => $entry['artist']          ?? '',
-            'Title'           => $entry['title']           ?? '',
+            'Cancon'          => $isCancon,
+            'Artist'          => $artist,
+            'Title'           => $title,
             'WEEKS'           => $entry['weeks']           ?? '',
             'CAT'             => $entry['cat']             ?? '',
             'Spins TW'        => $entry['Spins TW']        ?? '',
+            'SpinsTwDir'      => $spinsTwDir,
             'Spins ATD'       => $entry['Spins ATD']       ?? '',
             '#Streams CA'     => $entry['#Streams CA']     ?? '',
+            'StreamsCaDir'    => $streamsCaDir,
             '#Streams Van'    => $entry['#Streams Van']    ?? '',
+            'StreamsVanDir'   => $streamsVanDir,
             '#Spins TW'       => $entry['#Spins TW']       ?? '',
+            'NatSpinsTwDir'   => $natSpinsDir,
             '#Stns TW'        => $entry['#Stns TW']        ?? '',
             'Avg Spins'       => $entry['Avg Spins']       ?? '',
+            'AvgSpinsDir'     => $avgSpinsDir,
             'MB Cht'          => $entry['MB Cht']          ?? '',
             'Rk'              => $entry['Rk']              ?? '',
+            'RkDir'           => $rkDir,
             'Peak'            => $entry['Peak']            ?? '',
             'BB SJ Chart'     => $entry['BB SJ Chart']     ?? '',
             'Freq/Listen ATD' => $entry['Freq/Listen ATD'] ?? '',
             'Impres ATD'      => $entry['Impres ATD']      ?? '',
-            'RkGreen'         => (bool) ($entry['rk_green'] ?? false),
+            'RkGreen'         => $rkGreen,
         ];
     }
     $meta      = ['report' => $metaLine ?: ('Saved week: ' . $selectedWeek)];

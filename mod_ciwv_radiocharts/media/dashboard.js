@@ -2,31 +2,32 @@
 document.addEventListener('DOMContentLoaded', function () {
 
   // ── Column index map (must match tmpl/default.php column order) ──────────
-  // Columns: TW(0), NW(1), Artist(2), Title(3), WEEKS(4), CAT(5),
-  //          Spins TW(6), Spins ATD(7), #Streams CA(8), #Streams Van(9),
-  //          #Spins TW(10), #Stns TW(11), Avg Spins(12),
-  //          MB Cht(13), Rk(14), Peak(15), BB SJ Chart(16),
-  //          Freq/Listen ATD(17), Impres ATD(18)
+  // Columns: TW(0), NW(1), CC(2), Artist(3), Title(4), WEEKS(5), CAT(6),
+  //          Spins TW(7), Spins ATD(8), #Streams CA(9), #Streams Van(10),
+  //          #Spins TW(11), #Stns TW(12), Avg Spins(13),
+  //          MB Cht(14), Rk(15), Peak(16), BB SJ Chart(17),
+  //          Freq/Listen ATD(18), Impres ATD(19)
   const COL = {
     tw:          0,
     nw:          1,
-    artist:      2,
-    title:       3,
-    weeks:       4,
-    cat:         5,
-    spins_tw:    6,
-    spins_atd:   7,
-    streams_ca:  8,
-    streams_van: 9,
-    nat_spins_tw: 10,
-    stns_tw:     11,
-    avg_spins:   12,
-    mb_cht:      13,
-    rk:          14,
-    peak:        15,
-    bb_sj:       16,
-    freq_atd:    17,
-    imp_atd:     18
+    cc:          2,
+    artist:      3,
+    title:       4,
+    weeks:       5,
+    cat:         6,
+    spins_tw:    7,
+    spins_atd:   8,
+    streams_ca:  9,
+    streams_van: 10,
+    nat_spins_tw: 11,
+    stns_tw:     12,
+    avg_spins:   13,
+    mb_cht:      14,
+    rk:          15,
+    peak:        16,
+    bb_sj:       17,
+    freq_atd:    18,
+    imp_atd:     19
   };
 
   // Custom sort order for TW category
@@ -115,11 +116,18 @@ document.addEventListener('DOMContentLoaded', function () {
       const isNumeric = sortBy in numCols;
       const colIdx    = isNumeric ? numCols[sortBy] : textCols[sortBy];
       if (colIdx !== undefined) {
-        // Separate rows with data from rows with empty cells
-        const filled = [], empty = [];
+        // Separate rows: numeric values / non-numeric non-empty values / empty cells.
+        // Empty and non-numeric cells always sink to the bottom regardless of Reverse.
+        const filled = [], nonNumeric = [], empty = [];
         rows.forEach(r => {
           const v = (r.cells[colIdx]?.textContent.trim() ?? '').replace(/,/g, '');
-          (v === '' ? empty : filled).push(r);
+          if (v === '') {
+            empty.push(r);
+          } else if (isNumeric && isNaN(parseFloat(v))) {
+            nonNumeric.push(r);
+          } else {
+            filled.push(r);
+          }
         });
         const reverse = reverseCheck && reverseCheck.checked;
         if (isNumeric) {
@@ -138,9 +146,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return reverse ? -cmp : cmp;
           });
         }
-        // Rebuild rows: sorted filled rows first, then empties always last
+        // Rebuild rows: sorted numeric rows first, then non-numeric (e.g. -Rec-), then empties
         rows.length = 0;
         filled.forEach(r => rows.push(r));
+        nonNumeric.forEach(r => rows.push(r));
         empty.forEach(r => rows.push(r));
         rows.forEach(r => tbody.appendChild(r));
         return; // skip the generic reverse+append below
@@ -197,7 +206,15 @@ document.addEventListener('DOMContentLoaded', function () {
             // the saved value is explicitly non-empty; avoids clearing it with
             // empty values from state saved before the CAT field was introduced.
             if (catSel && stateMap[k].cat) catSel.value = stateMap[k].cat;
-            // Restore green Rk highlight when it was set on save
+            // Restore CanCon CC cell when saved state has the cancon flag
+            // (PHP already populates CC from the national CSV on page load;
+            //  this only activates for manually-added rows that bypassed the CSV).
+            if (stateMap[k].cancon && row.cells[COL.cc]) {
+              if (row.cells[COL.cc].textContent.trim() === '') {
+                row.cells[COL.cc].textContent = 'CC';
+              }
+            }
+            // Restore green Rk highlight when it was set on save (legacy support)
             if (stateMap[k].rk_green && row.cells[COL.rk]) {
               row.cells[COL.rk].classList.add('rc-rk-up');
             }
@@ -218,6 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const stateRows = Array.from(tbody.rows).map(row => ({
       tw:              selectValue(row, COL.tw),
       nw:              selectValue(row, COL.nw),
+      cancon:          (row.cells[COL.cc]?.textContent.trim() === 'CC'),
       artist:          row.cells[COL.artist]?.textContent.trim()         ?? '',
       title:           row.cells[COL.title]?.textContent.trim()          ?? '',
       weeks:           row.cells[COL.weeks]?.textContent.trim()          ?? '',
@@ -304,9 +322,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     finalRows.push(...others, ...noCategory);
 
-    // Header rows matching final-output-example.csv layout
-    const h1 = ['','','','','','','Spins','','OD Streams','','National','','','Chart Info','','','','',''];
-    const h2 = ['TW','NW','Artist','Title','WEEKS','CAT','TW','ATD',
+    // Header rows matching final-output-example.csv layout (CC column added)
+    const h1 = ['','','','','','','','Spins','','OD Streams','','National','','','Chart Info','','','','',''];
+    const h2 = ['TW','NW','CC','Artist','Title','WEEKS','CAT','TW','ATD',
                 '#Streams CA','#Streams Van','#Spins TW','#Stns TW','Avg Spins',
                 'MB Cht','Rk','Peak','BB SJ Chart','Freq/Listen ATD','Impres ATD'];
 
@@ -356,6 +374,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const EDITOR_FIELDS = [
     { id: 're-tw',           col: COL.tw,           isSelect: true  },
     { id: 're-nw',           col: COL.nw,           isSelect: true  },
+    { id: 're-cc',           col: COL.cc,           isSelect: false },
     { id: 're-artist',       col: COL.artist,       isSelect: false },
     { id: 're-title',        col: COL.title,        isSelect: false },
     { id: 're-weeks',        col: COL.weeks,        isSelect: false },
@@ -400,6 +419,7 @@ document.addEventListener('DOMContentLoaded', function () {
         td.appendChild(sel);
       } else {
         td.textContent = val;
+        if (f.col === COL.cc) td.className = 'rc-cc-cell';
       }
       tr.appendChild(td);
     });
@@ -419,7 +439,9 @@ document.addEventListener('DOMContentLoaded', function () {
       } else {
         td.textContent = val;
         // Clear any stale highlight on the Rk cell; user can re-save to restore it
-        if (f.col === COL.rk) td.classList.remove('rc-rk-up');
+        if (f.col === COL.rk) {
+          td.classList.remove('rc-rk-up', 'rc-val-up', 'rc-val-down');
+        }
       }
     });
   }
