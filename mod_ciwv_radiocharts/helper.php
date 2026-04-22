@@ -399,6 +399,47 @@ class ModCiwvRadiochartsHelper
     }
 
     /**
+     * Billboard Chart CSV parser.
+     *
+     * Format: one header row (Rank, Song, Artist, Last Week, Peak Pos, Weeks on Chart),
+     * then one row per song.
+     *
+     * Returns map: normalize(artist, song) => ['rank' => rank_value]
+     */
+    public static function parseBillboardCsv($filename)
+    {
+        if (!is_readable($filename)) {
+            return [];
+        }
+        $fh = fopen($filename, 'r');
+        if (!$fh) {
+            return [];
+        }
+        // Skip header row (Rank, Song, Artist, Last Week, Peak Pos, Weeks on Chart)
+        if (fgetcsv($fh) === false) {
+            fclose($fh);
+            return [];
+        }
+
+        $rows = [];
+        while (($row = fgetcsv($fh)) !== false) {
+            if (count(array_filter($row)) === 0) {
+                continue;
+            }
+            $rank   = trim($row[0] ?? ''); // col 1:1 – Rank
+            $song   = trim($row[1] ?? ''); // col 1:2 – Song
+            $artist = trim($row[2] ?? ''); // col 1:3 – Artist
+            if ($song === '' && $artist === '') {
+                continue;
+            }
+            $key        = self::normalize($artist, $song);
+            $rows[$key] = ['rank' => $rank];
+        }
+        fclose($fh);
+        return $rows;
+    }
+
+    /**
      * Luminate Streaming Station CSV: one header row, then 6 rows per song
      * (Airplay Spins CW/LW, Airplay Audience CW/LW, Streams CW/LW).
      * Returns map: normalize(artist,title) => ['CANADA' => streams_this_week]
@@ -705,11 +746,12 @@ class ModCiwvRadiochartsHelper
      */
     public static function getCombinedRows($dataDir)
     {
-        $stationFile  = self::getLatestFile($dataDir, 'station');
+        $stationFile    = self::getLatestFile($dataDir, 'station');
         $nationalSjFile = self::getLatestFile($dataDir, 'national_sj');
         $nationalAcFile = self::getLatestFile($dataDir, 'national_ac');
-        $strmFile     = self::getLatestFile($dataDir, 'streaming');
-        $mmFile       = self::getLatestFile($dataDir, 'musicmaster');
+        $strmFile       = self::getLatestFile($dataDir, 'streaming');
+        $mmFile         = self::getLatestFile($dataDir, 'musicmaster');
+        $bbFile         = self::getLatestFile($dataDir, 'billboard');
 
         // --- Station Playlist (primary source: Spins ATD, Format Rank, song list) ---
         $playlist = $stationFile ? self::parseStationPlaylistCsv($stationFile) : [];
@@ -745,6 +787,9 @@ class ModCiwvRadiochartsHelper
 
         // --- Streaming data (new Streaming CSV: both CA national and local market) ---
         $streamingIdx = $strmFile ? self::parseStreamingCsv($strmFile) : [];
+
+        // --- Billboard Chart (BB SJ chart rank for matching songs) ---
+        $billboardIdx = $bbFile ? self::parseBillboardCsv($bbFile) : [];
 
         // --- Report meta ---
         $reportMeta = $stationFile ? self::getReportMeta($stationFile) : '';
@@ -816,6 +861,24 @@ class ModCiwvRadiochartsHelper
             return null;
         };
 
+        // Helper: fuzzy-lookup Billboard data by artist/title
+        $findBillboard = function ($artist, $title) use ($billboardIdx) {
+            $key = self::normalize($artist, $title);
+            if (isset($billboardIdx[$key])) {
+                return $billboardIdx[$key];
+            }
+            foreach ($billboardIdx as $bKey => $bVal) {
+                $parts   = explode('|', $bKey, 2);
+                $bArtist = $parts[0] ?? '';
+                $bTitle  = $parts[1] ?? '';
+                if (self::titlesMatch($title, $bTitle)
+                    && (self::artistsMatch($artist, $bArtist) || self::surnameMatch($artist, $bArtist))) {
+                    return $bVal;
+                }
+            }
+            return null;
+        };
+
         // Helper: search station-playlist row for a key containing "Historical Data Since" + sub
         $getHistorical = function ($pl, $sub) {
             foreach ($pl as $k => $v) {
@@ -837,7 +900,7 @@ class ModCiwvRadiochartsHelper
         };
 
         // Helper: build a single output row
-        $buildRow = function ($artist, $title, $pl, $mm, $natSj, $natAc, $s) use ($getHistorical, $getFormatRank) {
+        $buildRow = function ($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb) use ($getHistorical, $getFormatRank) {
             // Streaming
             $streamsCa  = $s['CANADA'] ?? '';
             $streamsVan = $s['MARKET'] ?? '';
@@ -903,17 +966,48 @@ class ModCiwvRadiochartsHelper
                 return ($tf > $lf) === $higherIsBetter ? 'up' : 'down';
             };
 
+            // Helper: convert a CSV +/- delta string to a direction indicator.
+            $dirFromDelta = function ($delta) {
+                $v = str_replace(',', '', trim((string) $delta));
+                if (!is_numeric($v) || (float) $v == 0) {
+                    return '';
+                }
+                return ((float) $v > 0) ? 'up' : 'down';
+            };
+
+            // Station Playlist spins direction: composite key 'Spins_+/-'
+            // (user-facing col 10 / 0-based index 9 in the sub-header row).
+            $spinsTwDir = $pl ? $dirFromDelta($pl['Spins_+/-'] ?? '') : '';
+
+            // National spins direction: sum of SJ and AC +/- deltas (both 1-indexed).
+            // SJ col 11 / AC col 12 (0-based indices 10 and 11 respectively).
+            // Both use the composite key 'Spins_+/-' after the 2-row header parse.
+            // When a song appears on both charts the deltas are combined for a total.
+            $natSpinsDir      = '';
+            $combinedNatDelta = 0.0;
+            $hasNatDelta      = false;
+            foreach ([$natSj, $natAc] as $nat) {
+                if (!$nat) {
+                    continue;
+                }
+                $v = str_replace(',', '', trim($nat['Spins_+/-'] ?? ''));
+                if (is_numeric($v)) {
+                    $combinedNatDelta += (float) $v;
+                    $hasNatDelta = true;
+                }
+            }
+            if ($hasNatDelta && $combinedNatDelta != 0) {
+                $natSpinsDir = $combinedNatDelta > 0 ? 'up' : 'down';
+            }
+
             // CSV-derived direction flags from national chart LW vs TW columns.
             // The composite header keys for the national CSVs are:
-            //   Rank_TW / Rank_LW, Spins_TW / Spins_LW,
-            //   Avg. Station Rotations_TW / Avg. Station Rotations_LW
+            //   Rank_TW / Rank_LW, Avg. Station Rotations_TW / Avg. Station Rotations_LW
             $rkDir       = '';
-            $natSpinsDir = '';
             $avgSpinsDir = '';
             $natForDir   = $natSj ?: $natAc;
             if ($natForDir) {
                 $rkDir       = $wowDir($natForDir['Rank_TW'] ?? '',                      $natForDir['Rank_LW'] ?? '',                      false); // lower rank = better
-                $natSpinsDir = $wowDir($natForDir['Spins_TW'] ?? '',                      $natForDir['Spins_LW'] ?? '',                      true);
                 $avgSpinsDir = $wowDir($natForDir['Avg. Station Rotations_TW'] ?? '', $natForDir['Avg. Station Rotations_LW'] ?? '', true);
             }
 
@@ -952,7 +1046,7 @@ class ModCiwvRadiochartsHelper
                 'WEEKS'           => $weeks,
                 'CAT'             => $catCode,
                 'Spins TW'        => $spinsTw,
-                'SpinsTwDir'      => '', // filled by DB prior-week comparison in mod_ciwv_radiocharts.php
+                'SpinsTwDir'      => $spinsTwDir,
                 'Spins ATD'       => $spinsAtd,
                 '#Streams CA'     => $streamsCa,
                 'StreamsCaDir'    => '',
@@ -967,7 +1061,7 @@ class ModCiwvRadiochartsHelper
                 'Rk'              => $rk,
                 'RkDir'           => $rkDir,
                 'Peak'            => $peak,
-                'BB SJ Chart'     => '',
+                'BB SJ Chart'     => $bb ? ($bb['rank'] ?? '') : '',
                 'Freq/Listen ATD' => '',
                 'Impres ATD'      => '',
                 'RkGreen'         => $rkGreen,
@@ -995,8 +1089,9 @@ class ModCiwvRadiochartsHelper
             $natSj = $findNationalSj($artist, $title);
             $natAc = $findNationalAc($artist, $title);
             $s     = $findStreaming($artist, $title);
+            $bb    = $findBillboard($artist, $title);
 
-            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s);
+            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb);
         }
 
         // --- Secondary: MusicMaster-only songs not in Station Playlist ---
@@ -1023,7 +1118,8 @@ class ModCiwvRadiochartsHelper
             $natSj = $findNationalSj($artist, $title);
             $natAc = $findNationalAc($artist, $title);
             $s     = $findStreaming($artist, $title);
-            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s);
+            $bb    = $findBillboard($artist, $title);
+            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s, $bb);
         }
 
         // --- Tertiary: SJ national-only songs (not in station playlist or MusicMaster) ---
@@ -1048,7 +1144,8 @@ class ModCiwvRadiochartsHelper
             $localSongs[]       = [$artist, $title];
             $natAc = $findNationalAc($artist, $title);
             $s     = $findStreaming($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s);
+            $bb    = $findBillboard($artist, $title);
+            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s, $bb);
         }
 
         // --- Quaternary: AC national-only songs (not already added) ---
@@ -1071,8 +1168,9 @@ class ModCiwvRadiochartsHelper
             }
             $localKeysSet[$key] = true;
             $localSongs[]       = [$artist, $title];
-            $s = $findStreaming($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s);
+            $s  = $findStreaming($artist, $title);
+            $bb = $findBillboard($artist, $title);
+            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s, $bb);
         }
 
         return [
