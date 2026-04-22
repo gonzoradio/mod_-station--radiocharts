@@ -167,7 +167,9 @@ document.addEventListener('DOMContentLoaded', function () {
           if (stateMap[k]) {
             const twSel = row.querySelector('select[name="TW[]"]');
             const nwSel = row.querySelector('select[name="NW[]"]');
-            if (twSel) twSel.value = stateMap[k].tw || '';
+            // Only restore TW from saved state when the CSV didn't supply a value
+            // (PHP pre-selects TW from MusicMaster; saved state should not override it).
+            if (twSel && twSel.value === '') twSel.value = stateMap[k].tw || '';
             if (nwSel) nwSel.value = stateMap[k].nw || '';
           }
         });

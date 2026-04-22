@@ -1,4 +1,4 @@
-/* mod_ciwv_radiocharts – dashboard.js v4 */
+/* mod_ciwv_radiocharts – dashboard.js v5 */
 document.addEventListener('DOMContentLoaded', function () {
 
   // ── Column index map (must match tmpl/default.php column order) ──────────
@@ -188,7 +188,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const twSel  = row.querySelector('select.rc-sel-tw');
             const nwSel  = row.querySelector('select.rc-sel-nw');
             const catSel = row.querySelector('select.rc-sel-cat');
-            if (twSel)  twSel.value  = stateMap[k].tw  || '';
+            // Only restore TW from saved state when the CSV didn't supply a value
+            // (PHP pre-selects TW from MusicMaster; saved state should not override it).
+            // This mirrors the PHP prior-week overlay: `if ($row['TW'] === '') $row['TW'] = $prior['tw']`.
+            if (twSel && twSel.value === '') twSel.value = stateMap[k].tw || '';
             if (nwSel)  nwSel.value  = stateMap[k].nw  || '';
             // Only override the PHP-pre-selected CAT (from MusicMaster CSV) when
             // the saved value is explicitly non-empty; avoids clearing it with
