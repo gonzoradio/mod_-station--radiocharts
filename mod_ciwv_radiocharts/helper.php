@@ -415,17 +415,20 @@ class ModCiwvRadiochartsHelper
         if (!$fh) {
             return [];
         }
-        // Skip header row
-        fgetcsv($fh);
+        // Skip header row (Rank, Song, Artist, Last Week, Peak Pos, Weeks on Chart)
+        if (fgetcsv($fh) === false) {
+            fclose($fh);
+            return [];
+        }
 
         $rows = [];
         while (($row = fgetcsv($fh)) !== false) {
             if (count(array_filter($row)) === 0) {
                 continue;
             }
-            $rank   = trim($row[0] ?? '');
-            $song   = trim($row[1] ?? '');
-            $artist = trim($row[2] ?? '');
+            $rank   = trim($row[0] ?? ''); // col 1:1 – Rank
+            $song   = trim($row[1] ?? ''); // col 1:2 – Song
+            $artist = trim($row[2] ?? ''); // col 1:3 – Artist
             if ($song === '' && $artist === '') {
                 continue;
             }
