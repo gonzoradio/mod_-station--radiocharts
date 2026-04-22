@@ -635,6 +635,52 @@ class ModCiwvRadiochartsHelper
         return end($files);
     }
 
+    // ── CanCon lookup ────────────────────────────────────────────────────────
+
+    /**
+     * Build a set of normalize(artist, title) keys for all songs marked as
+     * Canadian Content in the current national CSV files.
+     *
+     * Used to populate the CC column for saved-week DB snapshots that predate
+     * the addition of the `cancon` field to the saved state.
+     *
+     * @param  string $dataDir  Absolute path to the data directory.
+     * @return array  Map of normalize(artist, title) => true for CanCon songs.
+     */
+    public static function getCanconLookup($dataDir)
+    {
+        $lookup = [];
+
+        // AC CSV: explicit 'Cancon' column (composite key at idx 7)
+        $acFile = self::getLatestFile($dataDir, 'national_ac');
+        if ($acFile) {
+            foreach (self::parseNationalCsv($acFile) as $row) {
+                if (trim($row['Cancon'] ?? '') === 'Yes') {
+                    $key = self::normalize($row['Artist'] ?? '', $row['Title'] ?? '');
+                    if ($key !== '|') {
+                        $lookup[$key] = true;
+                    }
+                }
+            }
+        }
+
+        // SJ CSV: no explicit label; the composite-header carry gives idx 3 the
+        // key 'Rank'. 'Yes' in that column marks a Canadian Content song.
+        $sjFile = self::getLatestFile($dataDir, 'national_sj');
+        if ($sjFile) {
+            foreach (self::parseNationalSjCsv($sjFile) as $row) {
+                if (trim($row['Rank'] ?? '') === 'Yes') {
+                    $key = self::normalize($row['Artist'] ?? '', $row['Title'] ?? '');
+                    if ($key !== '|') {
+                        $lookup[$key] = true;
+                    }
+                }
+            }
+        }
+
+        return $lookup;
+    }
+
     // ── Main data merge ──────────────────────────────────────────────────────
 
     /**
@@ -824,13 +870,60 @@ class ModCiwvRadiochartsHelper
             // Spins ATD = station's all-time spins from Station Playlist "Hist Spins"
             $spinsAtd = $pl ? $getHistorical($pl, 'Hist Spins') : '';
 
-            // SJ national data – provides MB Cht = SJAC, Rk (SJ format rank), Peak (PK), RkGreen
+            // CanCon detection:
+            // - AC CSV has an explicit 'Cancon' column (composite key 'Cancon' at idx 7).
+            // - SJ CSV: idx 3 has no section/sub header in the composite CSV; the carrying
+            //   section from idx 1 ('Rank') gives this column the composite key 'Rank'.
+            //   That column contains 'Yes' for Canadian Content songs on the SJ chart.
+            // - Also treat MusicMaster TW categories PC2 and PC3 as CanCon.
+            $isCancon = false;
+            if ($natAc && trim($natAc['Cancon'] ?? '') === 'Yes') {
+                $isCancon = true;
+            }
+            if (!$isCancon && $natSj && trim($natSj['Rank'] ?? '') === 'Yes') {
+                $isCancon = true;
+            }
+            if (!$isCancon && in_array($twCat, ['PC2', 'PC3'], true)) {
+                $isCancon = true;
+            }
+
+            // Week-over-week direction helper: compares two numeric strings.
+            // Returns 'up', 'down', or '' (no data / no change).
+            $wowDir = function ($tw, $lw, $higherIsBetter = true) {
+                $t = str_replace(',', '', trim((string) $tw));
+                $l = str_replace(',', '', trim((string) $lw));
+                if ($t === '' || $l === '' || !is_numeric($t) || !is_numeric($l)) {
+                    return '';
+                }
+                $tf = (float) $t;
+                $lf = (float) $l;
+                if ($tf == $lf) {
+                    return '';
+                }
+                return ($tf > $lf) === $higherIsBetter ? 'up' : 'down';
+            };
+
+            // CSV-derived direction flags from national chart LW vs TW columns.
+            // The composite header keys for the national CSVs are:
+            //   Rank_TW / Rank_LW, Spins_TW / Spins_LW,
+            //   Avg. Station Rotations_TW / Avg. Station Rotations_LW
+            $rkDir       = '';
+            $natSpinsDir = '';
+            $avgSpinsDir = '';
+            $natForDir   = $natSj ?: $natAc;
+            if ($natForDir) {
+                $rkDir       = $wowDir($natForDir['Rank_TW'] ?? '',                      $natForDir['Rank_LW'] ?? '',                      false); // lower rank = better
+                $natSpinsDir = $wowDir($natForDir['Spins_TW'] ?? '',                      $natForDir['Spins_LW'] ?? '',                      true);
+                $avgSpinsDir = $wowDir($natForDir['Avg. Station Rotations_TW'] ?? '', $natForDir['Avg. Station Rotations_LW'] ?? '', true);
+            }
+
+            // SJ national data – provides MB Cht = SJAC, Rk (SJ format rank), Peak (PK)
             // AC national data – provides MB Cht = CANAC fallback, or Rank_TW as Rk fallback
             // Station playlist Format Comparison Rank is the last Rk fallback.
             $mbCht   = '';
             $rk      = '';
             $peak    = '';
-            $rkGreen = false;
+            $rkGreen = ($rkDir === 'up');
 
             if ($natSj) {
                 $mbCht   = 'SJAC';
@@ -839,8 +932,6 @@ class ModCiwvRadiochartsHelper
                 $rk      = ($sjRk !== '' && $sjRk !== '-') ? $sjRk : ($natSj['Rank_TW'] ?? '');
                 // Peak = PK column (all-time peak rank on the SJ chart)
                 $peak    = $natSj['PK'] ?? '';
-                // col_3 is the "up TW" flag column (no section/sub header in the composite CSV)
-                $rkGreen = (trim($natSj['col_3'] ?? '') === 'Yes');
             } elseif ($natAc) {
                 $mbCht = 'CANAC';
                 // Use station format rank as primary Rk, AC national rank as fallback
@@ -855,19 +946,26 @@ class ModCiwvRadiochartsHelper
             return [
                 'TW'              => $twCat,
                 'NW'              => '',
+                'Cancon'          => $isCancon,
                 'Artist'          => $artist,
                 'Title'           => $title,
                 'WEEKS'           => $weeks,
                 'CAT'             => $catCode,
                 'Spins TW'        => $spinsTw,
+                'SpinsTwDir'      => '', // filled by DB prior-week comparison in mod_ciwv_radiocharts.php
                 'Spins ATD'       => $spinsAtd,
                 '#Streams CA'     => $streamsCa,
+                'StreamsCaDir'    => '',
                 '#Streams Van'    => $streamsVan,
+                'StreamsVanDir'   => '',
                 '#Spins TW'       => $natSpinsTW,
+                'NatSpinsTwDir'   => $natSpinsDir,
                 '#Stns TW'        => $natStnsOn,
                 'Avg Spins'       => $avgSpins,
+                'AvgSpinsDir'     => $avgSpinsDir,
                 'MB Cht'          => $mbCht,
                 'Rk'              => $rk,
+                'RkDir'           => $rkDir,
                 'Peak'            => $peak,
                 'BB SJ Chart'     => '',
                 'Freq/Listen ATD' => '',

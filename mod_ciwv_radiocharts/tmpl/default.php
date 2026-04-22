@@ -121,7 +121,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
       <thead>
         <tr>
           <th colspan="2">Category</th>
-          <th></th><th></th><th></th><th></th>
+          <th></th><th></th><th></th><th></th><th></th>
           <th colspan="2">Spins</th>
           <th colspan="2">OD Streams</th>
           <th colspan="3">National</th>
@@ -130,6 +130,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
         <tr>
           <th>TW</th>
           <th>NW</th>
+          <th>CC</th>
           <th>Artist</th>
           <th>Title</th>
           <th>WEEKS</th>
@@ -153,6 +154,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
         <tr>
           <td><select id="re-tw"><?= $twOptionsMap[''] ?></select></td>
           <td><select id="re-nw"><?= $nwOptions ?></select></td>
+          <td><input type="text" id="re-cc" style="width:35px;" placeholder="CC"></td>
           <td><input type="text" id="re-artist" style="width:120px;"></td>
           <td><input type="text" id="re-title" style="width:140px;"></td>
           <td><input type="text" id="re-weeks" style="width:40px;"></td>
@@ -190,7 +192,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
       <thead>
         <tr>
           <th colspan="2">Category</th>
-          <th></th><th></th><th></th><th></th>
+          <th></th><th></th><th></th><th></th><th></th>
           <th colspan="2">Spins</th>
           <th colspan="2">OD Streams</th>
           <th colspan="3">National</th>
@@ -199,6 +201,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
         <tr>
           <th>TW</th>
           <th>NW</th>
+          <th>CC</th>
           <th>Artist</th>
           <th>Title</th>
           <th>WEEKS</th>
@@ -220,22 +223,36 @@ $catOptionsMap = $buildOptionsMap($catOpts);
       </thead>
       <tbody>
         <?php foreach ($rows as $row): ?>
+        <?php
+          $dirClass = function($dir) {
+            if ($dir === 'up')   return ' class="rc-val-up"';
+            if ($dir === 'down') return ' class="rc-val-down"';
+            return '';
+          };
+          $rkClass = '';
+          if (!empty($row['RkDir'])) {
+            $rkClass = ' class="rc-val-' . $row['RkDir'] . '"';
+          } elseif (!empty($row['RkGreen'])) {
+            $rkClass = ' class="rc-rk-up"';
+          }
+        ?>
         <tr>
           <td><select name="TW[]" class="rc-sel-tw"><?= $twOptionsMap[$row['TW'] ?? ''] ?? $twOptionsMap[''] ?></select></td>
           <td><select name="NW[]" class="rc-sel-nw"><?= $nwOptions ?></select></td>
+          <td class="rc-cc-cell"><?= !empty($row['Cancon']) ? 'CC' : '' ?></td>
           <td><?= htmlspecialchars($row['Artist'] ?? '') ?></td>
           <td><?= htmlspecialchars($row['Title'] ?? '') ?></td>
           <td><?= htmlspecialchars((string) ($row['WEEKS'] ?? '')) ?></td>
           <td><select name="CAT[]" class="rc-sel-cat"><?= $catOptionsMap[$row['CAT'] ?? ''] ?? $catOptionsMap[''] ?></select></td>
-          <td><?= htmlspecialchars((string) ($row['Spins TW'] ?? '')) ?></td>
+          <td<?= $dirClass($row['SpinsTwDir'] ?? '') ?>><?= htmlspecialchars((string) ($row['Spins TW'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['Spins ATD'] ?? '')) ?></td>
-          <td><?= htmlspecialchars((string) ($row['#Streams CA'] ?? '')) ?></td>
-          <td><?= htmlspecialchars((string) ($row['#Streams Van'] ?? '')) ?></td>
-          <td><?= htmlspecialchars((string) ($row['#Spins TW'] ?? '')) ?></td>
+          <td<?= $dirClass($row['StreamsCaDir'] ?? '') ?>><?= htmlspecialchars((string) ($row['#Streams CA'] ?? '')) ?></td>
+          <td<?= $dirClass($row['StreamsVanDir'] ?? '') ?>><?= htmlspecialchars((string) ($row['#Streams Van'] ?? '')) ?></td>
+          <td<?= $dirClass($row['NatSpinsTwDir'] ?? '') ?>><?= htmlspecialchars((string) ($row['#Spins TW'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['#Stns TW'] ?? '')) ?></td>
-          <td><?= htmlspecialchars((string) ($row['Avg Spins'] ?? '')) ?></td>
+          <td<?= $dirClass($row['AvgSpinsDir'] ?? '') ?>><?= htmlspecialchars((string) ($row['Avg Spins'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['MB Cht'] ?? '')) ?></td>
-          <td<?= !empty($row['RkGreen']) ? ' class="rc-rk-up"' : '' ?>><?= htmlspecialchars((string) ($row['Rk'] ?? '')) ?></td>
+          <td<?= $rkClass ?>><?= htmlspecialchars((string) ($row['Rk'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['Peak'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['BB SJ Chart'] ?? '')) ?></td>
           <td><?= htmlspecialchars((string) ($row['Freq/Listen ATD'] ?? '')) ?></td>

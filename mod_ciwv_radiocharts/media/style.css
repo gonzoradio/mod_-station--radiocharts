@@ -136,6 +136,23 @@
     font-weight: bold;
 }
 
+/* Week-over-week direction indicators for numeric cells */
+.rc-val-up {
+    color: #2e7d32;
+    font-weight: bold;
+}
+.rc-val-down {
+    color: #c62828;
+    font-weight: bold;
+}
+
+/* CC (Canadian Content) indicator cell */
+.rc-cc-cell {
+    text-align: center;
+    font-weight: bold;
+    color: #1565c0;
+}
+
 /* ── Row editor (shown for saved weeks only) ─────────────────────────────── */
 
 #rc-row-editor {
