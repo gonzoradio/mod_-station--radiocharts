@@ -514,25 +514,8 @@ document.addEventListener('DOMContentLoaded', function () {
       ghostTable.style.width = tableEl.getBoundingClientRect().width + 'px';
     }
 
-    // Return the height of any fixed/sticky navigation bar sitting above the
-    // scroll container so the overlay is placed below it.
-    // Cached and only re-evaluated on resize.
-    let cachedNavOffset = -1;
-    function navOffset() {
-      if (cachedNavOffset >= 0) return cachedNavOffset;
-      const candidates = document.querySelectorAll(
-        '.navbar, nav, header, [class*="toolbar"], [id*="navbar"], [id*="header"]'
-      );
-      let h = 0;
-      candidates.forEach(function (el) {
-        const pos = window.getComputedStyle(el).position;
-        if ((pos === 'fixed' || pos === 'sticky') && el.offsetHeight > h) {
-          h = el.offsetHeight;
-        }
-      });
-      cachedNavOffset = h;
-      return h;
-    }
+    // Height of the site's fixed top navigation bar.
+    const NAV_H = 90;
 
     function syncHScroll() {
       ghostTable.style.transform = 'translateX(-' + scrollEl.scrollLeft + 'px)';
@@ -541,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function update() {
       const theadRect  = realThead.getBoundingClientRect();
       const scrollRect = scrollEl.getBoundingClientRect();
-      const off        = navOffset();
+      const off        = NAV_H;
       // Show the clone once the real header's bottom edge disappears above the
       // nav bar, and hide it once the table's bottom edge leaves the viewport.
       const show = theadRect.bottom <= off && scrollRect.bottom > off + 10;
@@ -560,9 +543,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initial width sync (widths are stable after DOM load on this static page)
     syncWidths();
 
-    window.addEventListener('scroll',  update,       { passive: true });
-    window.addEventListener('resize',  onResize,     { passive: true });
-    scrollEl.addEventListener('scroll', syncHScroll, { passive: true });
+    window.addEventListener('scroll',  update,                          { passive: true });
+    window.addEventListener('resize',  function () { syncWidths(); update(); }, { passive: true });
+    scrollEl.addEventListener('scroll', syncHScroll,                   { passive: true });
   }());
 
 });
