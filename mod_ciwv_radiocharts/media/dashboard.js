@@ -472,4 +472,80 @@ document.addEventListener('DOMContentLoaded', function () {
     clearEditor();
   });
 
+  // ── Floating sticky header ─────────────────────────────────────────────────
+  // position:sticky on <thead> doesn't work when the table lives inside an
+  // overflow-x:auto wrapper (that wrapper becomes the scroll container for both
+  // axes, so sticky fires relative to it and never activates vertically).
+  // Instead we clone the <thead> into a position:fixed overlay and show it
+  // whenever the real header scrolls above the viewport.
+  (function () {
+    const tableEl  = document.querySelector('.rc-dashboard-table');
+    const scrollEl = document.querySelector('.rc-table-scroll');
+    if (!tableEl || !scrollEl || !tableEl.tHead) return;
+
+    const realThead = tableEl.tHead;
+
+    // Build the fixed overlay
+    const ghost = document.createElement('div');
+    ghost.className = 'rc-sticky-hdr';
+    ghost.style.display = 'none';
+    document.body.appendChild(ghost);
+
+    const ghostTable = document.createElement('table');
+    ghostTable.className = 'rc-dashboard-table rc-sticky-hdr-table';
+    ghost.appendChild(ghostTable);
+    ghostTable.appendChild(realThead.cloneNode(true));
+
+    // Copy the exact rendered cell widths from the live table to the clone so
+    // every column aligns perfectly. Called on mount and on resize only.
+    function syncWidths() {
+      const realRows  = realThead.rows;
+      const ghostRows = ghostTable.rows;
+      for (let r = 0; r < realRows.length; r++) {
+        if (!ghostRows[r]) continue;
+        for (let c = 0; c < realRows[r].cells.length; c++) {
+          if (!ghostRows[r].cells[c]) continue;
+          const w = realRows[r].cells[c].getBoundingClientRect().width;
+          ghostRows[r].cells[c].style.width    = w + 'px';
+          ghostRows[r].cells[c].style.minWidth = w + 'px';
+          ghostRows[r].cells[c].style.maxWidth = w + 'px';
+        }
+      }
+      ghostTable.style.width = tableEl.getBoundingClientRect().width + 'px';
+    }
+
+    // Height of the site's fixed top navigation bar.
+    const NAV_H = 90;
+
+    function syncHScroll() {
+      ghostTable.style.transform = 'translateX(-' + scrollEl.scrollLeft + 'px)';
+    }
+
+    function update() {
+      const theadRect  = realThead.getBoundingClientRect();
+      const scrollRect = scrollEl.getBoundingClientRect();
+      const off        = NAV_H;
+      // Show the clone once the real header's bottom edge disappears above the
+      // nav bar, and hide it once the table's bottom edge leaves the viewport.
+      const show = theadRect.bottom <= off && scrollRect.bottom > off + 10;
+
+      if (show) {
+        ghost.style.display = 'block';
+        ghost.style.top     = off + 'px';
+        ghost.style.left    = scrollRect.left + 'px';
+        ghost.style.width   = scrollRect.width + 'px';
+        syncHScroll();
+      } else {
+        ghost.style.display = 'none';
+      }
+    }
+
+    // Initial width sync (widths are stable after DOM load on this static page)
+    syncWidths();
+
+    window.addEventListener('scroll',  update,                          { passive: true });
+    window.addEventListener('resize',  function () { syncWidths(); update(); }, { passive: true });
+    scrollEl.addEventListener('scroll', syncHScroll,                   { passive: true });
+  }());
+
 });
