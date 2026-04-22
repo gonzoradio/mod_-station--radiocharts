@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   // Custom sort order for TW category
-  const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',''];
+  const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',''];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -240,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Group: A1/J/A2/P/B/C/D then ADDs-by-NW then others
     const groups   = {};
     const addsByNW = {};
-    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(c => { groups[c] = []; addsByNW[c] = []; });
+    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(c => { groups[c] = []; addsByNW[c] = []; });
     const leftovers = [];
 
     allRows.forEach(item => {
@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     const finalRows = [];
-    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(k => {
+    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(k => {
       finalRows.push(...groups[k], ...addsByNW[k]);
     });
     finalRows.push(...leftovers);
@@ -325,9 +325,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const tbody = getTBody();
     if (!tbody) return;
 
-    const twVals = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT'];
-    const nwVals = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',
-                    'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC2?','PC3?','Q?','OUT?'];
+    const twVals = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT'];
+    const nwVals = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',
+                    'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC?','PC2?','PC3?','Q?','OUT?'];
 
     function makeSelect(name, vals) {
       const sel = document.createElement('select');

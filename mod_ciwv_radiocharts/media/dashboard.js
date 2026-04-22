@@ -30,12 +30,12 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   // Custom sort order for TW category
-  const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',''];
+  const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',''];
 
   // TW and NW option lists (must match helper.php)
-  const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT'];
-  const NW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC2','PC3','HOLD','ADD','Q','OUT',
-                   'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC2?','PC3?','Q?','OUT?'];
+  const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT'];
+  const NW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',
+                   'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC?','PC2?','PC3?','Q?','OUT?'];
   const CAT_VALS = ['','1','2','3','S','PSG','G','F','GS','GP','P','V','T','TG','SP','TS','GT'];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const groups     = {};
     const addsByNW   = {};
     const noCategory = [];
-    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(c => {
+    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(c => {
       groups[c]   = [];
       addsByNW[c] = [];
     });
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     const finalRows = [];
-    ['A1','J','A2','P','B','C','D','GOLD','PC2','PC3'].forEach(k => {
+    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(k => {
       finalRows.push(...groups[k], ...addsByNW[k]);
     });
     finalRows.push(...others, ...noCategory);
