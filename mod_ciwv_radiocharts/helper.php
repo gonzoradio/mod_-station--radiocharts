@@ -975,10 +975,12 @@ class ModCiwvRadiochartsHelper
                 return ((float) $v > 0) ? 'up' : 'down';
             };
 
-            // Station Playlist spins direction: composite key 'Spins_+/-' (col 10, 1-indexed).
+            // Station Playlist spins direction: composite key 'Spins_+/-'
+            // (user-facing col 10 / 0-based index 9 in the sub-header row).
             $spinsTwDir = $pl ? $dirFromDelta($pl['Spins_+/-'] ?? '') : '';
 
-            // National spins direction: sum of SJ (col 11) and AC (col 12) +/- deltas.
+            // National spins direction: sum of SJ and AC +/- deltas (both 1-indexed).
+            // SJ col 11 / AC col 12 (0-based indices 10 and 11 respectively).
             // Both use the composite key 'Spins_+/-' after the 2-row header parse.
             // When a song appears on both charts the deltas are combined for a total.
             $natSpinsDir      = '';
