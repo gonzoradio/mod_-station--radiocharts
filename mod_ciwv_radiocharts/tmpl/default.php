@@ -6,7 +6,7 @@ use Joomla\CMS\Uri\Uri;
 
 $doc = Factory::getDocument();
 $doc->addStyleSheet(Uri::root() . 'modules/mod_ciwv_radiocharts/media/style.css');
-$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=5');
+$doc->addScript(Uri::root() . 'modules/mod_ciwv_radiocharts/media/dashboard.js?v=6');
 
 $twCats  = ModCiwvRadiochartsHelper::$twCategories;
 $nwCats  = ModCiwvRadiochartsHelper::$nwCategories;
@@ -236,7 +236,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
             $rkClass = ' class="rc-rk-up"';
           }
         ?>
-        <tr>
+        <tr data-src="<?= (int) ($row['SourceGroup'] ?? ModCiwvRadiochartsHelper::SRC_STATION) ?>"><?php /* SRC_STATION=0, SRC_MM_ONLY=1, SRC_SJ_ONLY=2, SRC_AC_ONLY=3 */ ?>
           <td><select name="TW[]" class="rc-sel-tw"><?= $twOptionsMap[$row['TW'] ?? ''] ?? $twOptionsMap[''] ?></select></td>
           <td><select name="NW[]" class="rc-sel-nw"><?= $nwOptions ?></select></td>
           <td class="rc-cc-cell"><?= !empty($row['Cancon']) ? 'CC' : '' ?></td>

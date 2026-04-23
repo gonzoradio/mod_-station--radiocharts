@@ -1,4 +1,4 @@
-/* mod_ciwv_radiocharts – dashboard.js v5 */
+/* mod_ciwv_radiocharts – dashboard.js v6 */
 document.addEventListener('DOMContentLoaded', function () {
 
   // ── Column index map (must match tmpl/default.php column order) ──────────
@@ -32,6 +32,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Custom sort order for TW category
   const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',''];
+
+  // Source-group constants (must match ModCiwvRadiochartsHelper in helper.php)
+  const SRC_STATION = 0; // Station Playlist songs
+  const SRC_MM_ONLY = 1; // MusicMaster-only songs
+  const SRC_SJ_ONLY = 2; // SJ national-only songs
+  const SRC_AC_ONLY = 3; // AC national-only songs
 
   // TW and NW option lists (must match helper.php)
   const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT'];
@@ -100,7 +106,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const vB = selectValue(b, COL.tw);
         const iA = TW_ORDER.indexOf(vA);
         const iB = TW_ORDER.indexOf(vB);
-        return (iA === -1 ? TW_ORDER.length : iA) - (iB === -1 ? TW_ORDER.length : iB);
+        const catDiff = (iA === -1 ? TW_ORDER.length : iA) - (iB === -1 ? TW_ORDER.length : iB);
+        if (catDiff !== 0) return catDiff;
+        // Secondary: station-playlist songs (data-src="0") before MM-only (1) before
+        // national-only (2/3) within the same TW category.
+        const gA = parseInt(a.dataset.src ?? String(SRC_STATION));
+        const gB = parseInt(b.dataset.src ?? String(SRC_STATION));
+        return gA - gB;
       });
     } else {
       // Text columns sort ascending by default; numeric columns sort descending (highest first).
@@ -218,6 +230,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (stateMap[k].rk_green && row.cells[COL.rk]) {
               row.cells[COL.rk].classList.add('rc-rk-up');
             }
+            // Restore source_group on the row element so TW sort secondary key works
+            if (stateMap[k].source_group !== undefined) {
+              row.dataset.src = String(stateMap[k].source_group);
+            }
           }
         });
         initialSort();
@@ -254,10 +270,15 @@ document.addEventListener('DOMContentLoaded', function () {
       'Freq/Listen ATD': row.cells[COL.freq_atd]?.textContent.trim()     ?? '',
       'Impres ATD':    row.cells[COL.imp_atd]?.textContent.trim()        ?? '',
       rk_green:        row.cells[COL.rk]?.classList.contains('rc-rk-up') ?? false,
-      spins_tw_dir:    (row.cells[COL.spins_tw]?.classList.contains('rc-val-up')      ? 'up'
-                     : row.cells[COL.spins_tw]?.classList.contains('rc-val-down')    ? 'down' : ''),
-      nat_spins_tw_dir:(row.cells[COL.nat_spins_tw]?.classList.contains('rc-val-up')  ? 'up'
-                     : row.cells[COL.nat_spins_tw]?.classList.contains('rc-val-down')? 'down' : ''),
+      spins_tw_dir:    (row.cells[COL.spins_tw]?.classList.contains('rc-val-up')       ? 'up'
+                     : row.cells[COL.spins_tw]?.classList.contains('rc-val-down')     ? 'down' : ''),
+      nat_spins_tw_dir:(row.cells[COL.nat_spins_tw]?.classList.contains('rc-val-up')   ? 'up'
+                     : row.cells[COL.nat_spins_tw]?.classList.contains('rc-val-down') ? 'down' : ''),
+      streams_ca_dir:  (row.cells[COL.streams_ca]?.classList.contains('rc-val-up')     ? 'up'
+                     : row.cells[COL.streams_ca]?.classList.contains('rc-val-down')   ? 'down' : ''),
+      streams_van_dir: (row.cells[COL.streams_van]?.classList.contains('rc-val-up')    ? 'up'
+                     : row.cells[COL.streams_van]?.classList.contains('rc-val-down')  ? 'down' : ''),
+      source_group:    parseInt(row.dataset.src ?? String(SRC_STATION)),
     }));
 
     const metaElem = document.getElementById('rc-meta-line');
