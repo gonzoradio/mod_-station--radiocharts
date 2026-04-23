@@ -358,13 +358,13 @@ class ModCiwvRadiochartsHelper
      * Column positions (1-indexed per data-column-definitions.md):
      *   1:1  (index 0)  – Title
      *   1:2  (index 1)  – Artist
-     *   1:14 (index 13) – National Streams TW  → stored as CANADA
-     *   1:18 (index 17) – Local Market Streams TW → stored as MARKET
+     *   1:14 (index 13) – National Streams TW           → CANADA
+     *   1:15 (index 14) – % Change (national, vs LW)    → CANADA_PCT  (used for StreamsCaDir)
+     *   1:18 (index 17) – Local Market Streams TW       → MARKET
+     *   1:19 (index 18) – % Change - Market (vs LW)     → MARKET_PCT  (used for StreamsVanDir)
      *
-     * Columns 1:15 (% Change national) and 1:19 (% Change market) are present in
-     * the file but not extracted; only the stream counts are needed for the dashboard.
-     *
-     * Returns map: normalize(artist, title) => ['CANADA' => streams_tw, 'MARKET' => market_streams_tw]
+     * Returns map: normalize(artist, title) =>
+     *   ['CANADA' => streams_tw, 'CANADA_PCT' => pct_change, 'MARKET' => mkt_streams_tw, 'MARKET_PCT' => mkt_pct_change]
      */
     public static function parseStreamingCsv($filename)
     {
@@ -389,10 +389,17 @@ class ModCiwvRadiochartsHelper
             if ($title === '' && $artist === '') {
                 continue;
             }
-            $canada = trim($row[13] ?? '');
-            $market = trim($row[17] ?? '');
-            $key    = self::normalize($artist, $title);
-            $rows[$key] = ['CANADA' => $canada, 'MARKET' => $market];
+            $canada    = trim($row[13] ?? '');
+            $canadaPct = trim($row[14] ?? ''); // % Change national (1:15)
+            $market    = trim($row[17] ?? '');
+            $marketPct = trim($row[18] ?? ''); // % Change market (1:19)
+            $key        = self::normalize($artist, $title);
+            $rows[$key] = [
+                'CANADA'     => $canada,
+                'CANADA_PCT' => $canadaPct,
+                'MARKET'     => $market,
+                'MARKET_PCT' => $marketPct,
+            ];
         }
         fclose($fh);
         return $rows;
@@ -692,7 +699,7 @@ class ModCiwvRadiochartsHelper
     {
         $lookup = [];
 
-        // AC CSV: explicit 'Cancon' column (composite key at idx 7)
+        // AC CSV: explicit 'Cancon' column (composite key 'Cancon' at index 7).
         $acFile = self::getLatestFile($dataDir, 'national_ac');
         if ($acFile) {
             foreach (self::parseNationalCsv($acFile) as $row) {
@@ -705,12 +712,16 @@ class ModCiwvRadiochartsHelper
             }
         }
 
-        // SJ CSV: no explicit label; the composite-header carry gives idx 3 the
-        // key 'Rank'. 'Yes' in that column marks a Canadian Content song.
-        $sjFile = self::getLatestFile($dataDir, 'national_sj');
-        if ($sjFile) {
-            foreach (self::parseNationalSjCsv($sjFile) as $row) {
-                if (trim($row['Rank'] ?? '') === 'Yes') {
+        // NOTE: The SJ CSV (NationalPlaylist_SJ) does NOT have a CanCon column.
+        // Composite key 'Rank' at index 3 in the SJ CSV is the "up TW" rank-movement
+        // indicator ('Yes' = song improved in rank this week), not a CanCon flag.
+
+        // Station Playlist: explicit 'Cancon' column (composite key 'Cancon' at index 4).
+        // This covers station-played songs that may not appear on any national chart.
+        $stationFile = self::getLatestFile($dataDir, 'station');
+        if ($stationFile) {
+            foreach (self::parseStationPlaylistCsv($stationFile) as $row) {
+                if (trim($row['Cancon'] ?? '') === 'Yes') {
                     $key = self::normalize($row['Artist'] ?? '', $row['Title'] ?? '');
                     if ($key !== '|') {
                         $lookup[$key] = true;
@@ -900,10 +911,23 @@ class ModCiwvRadiochartsHelper
         };
 
         // Helper: build a single output row
-        $buildRow = function ($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb) use ($getHistorical, $getFormatRank) {
-            // Streaming
-            $streamsCa  = $s['CANADA'] ?? '';
-            $streamsVan = $s['MARKET'] ?? '';
+        $buildRow = function ($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb, $sourceGroup = 0) use ($getHistorical, $getFormatRank) {
+            // Streaming values and % Change direction (cols 13-14, 17-18 in new Streaming CSV)
+            $streamsCa    = $s['CANADA'] ?? '';
+            $streamsVan   = $s['MARKET'] ?? '';
+            $streamsCaDir = '';
+            $streamsVanDir = '';
+
+            // Derive streaming direction directly from the CSV % Change columns.
+            // A positive % change means streams went UP; negative means DOWN.
+            $pctCaDelta = str_replace(',', '', trim((string) ($s['CANADA_PCT'] ?? '')));
+            if (is_numeric($pctCaDelta) && (float) $pctCaDelta != 0) {
+                $streamsCaDir = ((float) $pctCaDelta > 0) ? 'up' : 'down';
+            }
+            $pctMktDelta = str_replace(',', '', trim((string) ($s['MARKET_PCT'] ?? '')));
+            if (is_numeric($pctMktDelta) && (float) $pctMktDelta != 0) {
+                $streamsVanDir = ((float) $pctMktDelta > 0) ? 'up' : 'down';
+            }
 
             // National spins/stations: SJ chart takes priority (SJAC songs), AC is fallback (CANAC songs)
             $natSpinsTW = '';
@@ -934,16 +958,16 @@ class ModCiwvRadiochartsHelper
             $spinsAtd = $pl ? $getHistorical($pl, 'Hist Spins') : '';
 
             // CanCon detection:
-            // - AC CSV has an explicit 'Cancon' column (composite key 'Cancon' at idx 7).
-            // - SJ CSV: idx 3 has no section/sub header in the composite CSV; the carrying
-            //   section from idx 1 ('Rank') gives this column the composite key 'Rank'.
-            //   That column contains 'Yes' for Canadian Content songs on the SJ chart.
-            // - Also treat MusicMaster TW categories PC2 and PC3 as CanCon.
+            // - AC CSV: explicit 'Cancon' column (composite key 'Cancon' at index 7). ✓
+            // - SJ CSV: NO CanCon column. Composite key 'Rank' at index 3 is the "up TW"
+            //   rank-movement marker ('Yes' = song improved rank this week), NOT CanCon.
+            // - Station Playlist: explicit 'Cancon' column (composite key 'Cancon' at index 4).
+            // - MusicMaster TW categories PC2 and PC3 indicate CanCon.
             $isCancon = false;
             if ($natAc && trim($natAc['Cancon'] ?? '') === 'Yes') {
                 $isCancon = true;
             }
-            if (!$isCancon && $natSj && trim($natSj['Rank'] ?? '') === 'Yes') {
+            if (!$isCancon && $pl && trim($pl['Cancon'] ?? '') === 'Yes') {
                 $isCancon = true;
             }
             if (!$isCancon && in_array($twCat, ['PC2', 'PC3'], true)) {
@@ -979,9 +1003,9 @@ class ModCiwvRadiochartsHelper
             // (user-facing col 10 / 0-based index 9 in the sub-header row).
             $spinsTwDir = $pl ? $dirFromDelta($pl['Spins_+/-'] ?? '') : '';
 
-            // National spins direction: sum of SJ and AC +/- deltas (both 1-indexed).
-            // SJ col 11 / AC col 12 (0-based indices 10 and 11 respectively).
-            // Both use the composite key 'Spins_+/-' after the 2-row header parse.
+            // National spins direction: derived from each chart's 'Spins_+/-' composite key.
+            // SJ: col 11 (0-based index 10); AC: col 12 (0-based index 11).
+            // Both produce the composite key 'Spins_+/-' after the 2-row header parse.
             // When a song appears on both charts the deltas are combined for a total.
             $natSpinsDir      = '';
             $combinedNatDelta = 0.0;
@@ -1001,23 +1025,31 @@ class ModCiwvRadiochartsHelper
             }
 
             // CSV-derived direction flags from national chart LW vs TW columns.
-            // The composite header keys for the national CSVs are:
-            //   Rank_TW / Rank_LW, Avg. Station Rotations_TW / Avg. Station Rotations_LW
+            // Composite header keys: Rank_TW / Rank_LW,
+            //   Avg. Station Rotations_TW / Avg. Station Rotations_LW
             $rkDir       = '';
             $avgSpinsDir = '';
             $natForDir   = $natSj ?: $natAc;
             if ($natForDir) {
-                $rkDir       = $wowDir($natForDir['Rank_TW'] ?? '',                      $natForDir['Rank_LW'] ?? '',                      false); // lower rank = better
+                $rkDir       = $wowDir($natForDir['Rank_TW'] ?? '',                         $natForDir['Rank_LW'] ?? '',                         false); // lower rank = better
                 $avgSpinsDir = $wowDir($natForDir['Avg. Station Rotations_TW'] ?? '', $natForDir['Avg. Station Rotations_LW'] ?? '', true);
             }
 
             // SJ national data – provides MB Cht = SJAC, Rk (SJ format rank), Peak (PK)
             // AC national data – provides MB Cht = CANAC fallback, or Rank_TW as Rk fallback
             // Station playlist Format Comparison Rank is the last Rk fallback.
-            $mbCht   = '';
-            $rk      = '';
-            $peak    = '';
-            $rkGreen = ($rkDir === 'up');
+            $mbCht = '';
+            $rk    = '';
+            $peak  = '';
+
+            // RkGreen: use the explicit "up TW" column (composite key 'Rank' at index 3)
+            // as the primary source — the national CSV sets this to 'Yes' when the song
+            // improved in rank this week.  Fall back to the computed $rkDir when the
+            // column is absent (e.g. older saved states).
+            $rkGreen = $natForDir && trim($natForDir['Rank'] ?? '') === 'Yes';
+            if (!$rkGreen) {
+                $rkGreen = ($rkDir === 'up');
+            }
 
             if ($natSj) {
                 $mbCht   = 'SJAC';
@@ -1049,9 +1081,9 @@ class ModCiwvRadiochartsHelper
                 'SpinsTwDir'      => $spinsTwDir,
                 'Spins ATD'       => $spinsAtd,
                 '#Streams CA'     => $streamsCa,
-                'StreamsCaDir'    => '',
+                'StreamsCaDir'    => $streamsCaDir,
                 '#Streams Van'    => $streamsVan,
-                'StreamsVanDir'   => '',
+                'StreamsVanDir'   => $streamsVanDir,
                 '#Spins TW'       => $natSpinsTW,
                 'NatSpinsTwDir'   => $natSpinsDir,
                 '#Stns TW'        => $natStnsOn,
@@ -1065,6 +1097,7 @@ class ModCiwvRadiochartsHelper
                 'Freq/Listen ATD' => '',
                 'Impres ATD'      => '',
                 'RkGreen'         => $rkGreen,
+                'SourceGroup'     => $sourceGroup,
             ];
         };
 
@@ -1091,7 +1124,7 @@ class ModCiwvRadiochartsHelper
             $s     = $findStreaming($artist, $title);
             $bb    = $findBillboard($artist, $title);
 
-            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb);
+            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb, 0);
         }
 
         // --- Secondary: MusicMaster-only songs not in Station Playlist ---
@@ -1119,7 +1152,7 @@ class ModCiwvRadiochartsHelper
             $natAc = $findNationalAc($artist, $title);
             $s     = $findStreaming($artist, $title);
             $bb    = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s, $bb);
+            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s, $bb, 1);
         }
 
         // --- Tertiary: SJ national-only songs (not in station playlist or MusicMaster) ---
@@ -1145,7 +1178,7 @@ class ModCiwvRadiochartsHelper
             $natAc = $findNationalAc($artist, $title);
             $s     = $findStreaming($artist, $title);
             $bb    = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s, $bb);
+            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s, $bb, 2);
         }
 
         // --- Quaternary: AC national-only songs (not already added) ---
@@ -1170,7 +1203,7 @@ class ModCiwvRadiochartsHelper
             $localSongs[]       = [$artist, $title];
             $s  = $findStreaming($artist, $title);
             $bb = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s, $bb);
+            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s, $bb, 3);
         }
 
         return [

@@ -146,8 +146,14 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
             if (($row['SpinsTwDir'] ?? '') === '') {
                 $row['SpinsTwDir'] = $compareDir($row['Spins TW'], $prior['Spins TW'] ?? '');
             }
-            $row['StreamsCaDir'] = $compareDir($row['#Streams CA'],  $prior['#Streams CA'] ?? '');
-            $row['StreamsVanDir']= $compareDir($row['#Streams Van'], $prior['#Streams Van']?? '');
+            // Streaming direction: CSV % Change is the primary source (set in $buildRow).
+            // Only fall back to DB WoW comparison when the CSV did not supply a direction.
+            if (($row['StreamsCaDir'] ?? '') === '') {
+                $row['StreamsCaDir'] = $compareDir($row['#Streams CA'],  $prior['#Streams CA'] ?? '');
+            }
+            if (($row['StreamsVanDir'] ?? '') === '') {
+                $row['StreamsVanDir'] = $compareDir($row['#Streams Van'], $prior['#Streams Van'] ?? '');
+            }
             // Fill in DB-based directions for national fields not covered by CSV LW data
             if (($row['NatSpinsTwDir'] ?? '') === '') {
                 $row['NatSpinsTwDir'] = $compareDir($row['#Spins TW'], $prior['#Spins TW'] ?? '');
@@ -193,8 +199,10 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
         // numeric comparison for snapshots saved before these flags were added.
         $spinsTwDir    = $entry['spins_tw_dir']     ?? '';
         $natSpinsDir   = $entry['nat_spins_tw_dir'] ?? '';
-        $streamsCaDir  = '';
-        $streamsVanDir = '';
+        // Streaming direction: prefer the value saved in state (from CSV % Change);
+        // fall back to DB WoW comparison for snapshots saved before this was added.
+        $streamsCaDir  = $entry['streams_ca_dir']   ?? '';
+        $streamsVanDir = $entry['streams_van_dir']  ?? '';
         $avgSpinsDir   = '';
         $rkDir         = '';
         if (isset($priorMap[$key])) {
@@ -202,8 +210,12 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
             if ($spinsTwDir === '') {
                 $spinsTwDir = $compareDir($entry['Spins TW'] ?? '', $prior['Spins TW'] ?? '');
             }
-            $streamsCaDir  = $compareDir($entry['#Streams CA']  ?? '', $prior['#Streams CA'] ?? '');
-            $streamsVanDir = $compareDir($entry['#Streams Van'] ?? '', $prior['#Streams Van']?? '');
+            if ($streamsCaDir === '') {
+                $streamsCaDir = $compareDir($entry['#Streams CA']  ?? '', $prior['#Streams CA'] ?? '');
+            }
+            if ($streamsVanDir === '') {
+                $streamsVanDir = $compareDir($entry['#Streams Van'] ?? '', $prior['#Streams Van'] ?? '');
+            }
             if ($natSpinsDir === '') {
                 $natSpinsDir = $compareDir($entry['#Spins TW'] ?? '', $prior['#Spins TW'] ?? '');
             }
@@ -245,6 +257,7 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
             'Freq/Listen ATD' => $entry['Freq/Listen ATD'] ?? '',
             'Impres ATD'      => $entry['Impres ATD']      ?? '',
             'RkGreen'         => $rkGreen,
+            'SourceGroup'     => (int) ($entry['source_group'] ?? 0),
         ];
     }
     $meta      = ['report' => $metaLine ?: ('Saved week: ' . $selectedWeek)];
