@@ -33,6 +33,12 @@ document.addEventListener('DOMContentLoaded', function () {
   // Custom sort order for TW category
   const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',''];
 
+  // Source-group constants (must match ModCiwvRadiochartsHelper in helper.php)
+  const SRC_STATION = 0; // Station Playlist songs
+  const SRC_MM_ONLY = 1; // MusicMaster-only songs
+  const SRC_SJ_ONLY = 2; // SJ national-only songs
+  const SRC_AC_ONLY = 3; // AC national-only songs
+
   // TW and NW option lists (must match helper.php)
   const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT'];
   const NW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',
@@ -104,8 +110,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (catDiff !== 0) return catDiff;
         // Secondary: station-playlist songs (data-src="0") before MM-only (1) before
         // national-only (2/3) within the same TW category.
-        const gA = parseInt(a.dataset.src || '0');
-        const gB = parseInt(b.dataset.src || '0');
+        const gA = parseInt(a.dataset.src ?? String(SRC_STATION));
+        const gB = parseInt(b.dataset.src ?? String(SRC_STATION));
         return gA - gB;
       });
     } else {
@@ -272,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function () {
                      : row.cells[COL.streams_ca]?.classList.contains('rc-val-down')   ? 'down' : ''),
       streams_van_dir: (row.cells[COL.streams_van]?.classList.contains('rc-val-up')    ? 'up'
                      : row.cells[COL.streams_van]?.classList.contains('rc-val-down')  ? 'down' : ''),
-      source_group:    parseInt(row.dataset.src || '0'),
+      source_group:    parseInt(row.dataset.src ?? String(SRC_STATION)),
     }));
 
     const metaElem = document.getElementById('rc-meta-line');

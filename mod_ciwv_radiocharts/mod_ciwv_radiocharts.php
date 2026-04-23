@@ -257,7 +257,7 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
             'Freq/Listen ATD' => $entry['Freq/Listen ATD'] ?? '',
             'Impres ATD'      => $entry['Impres ATD']      ?? '',
             'RkGreen'         => $rkGreen,
-            'SourceGroup'     => (int) ($entry['source_group'] ?? 0),
+            'SourceGroup'     => (int) ($entry['source_group'] ?? ModCiwvRadiochartsHelper::SRC_STATION),
         ];
     }
     $meta      = ['report' => $metaLine ?: ('Saved week: ' . $selectedWeek)];

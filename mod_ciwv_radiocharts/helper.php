@@ -24,7 +24,13 @@ class ModCiwvRadiochartsHelper
         'billboard'   => 'BillboardChart',
     ];
 
-    // ── Normalisation / fuzzy match ──────────────────────────────────────────
+    // Source-group constants: identify which CSV pass contributed a row.
+    // Used to ensure Station Playlist songs sort before national-only songs.
+    const SRC_STATION  = 0; // Primary:    Station Playlist
+    const SRC_MM_ONLY  = 1; // Secondary:  MusicMaster-only (not in Station Playlist)
+    const SRC_SJ_ONLY  = 2; // Tertiary:   SJ national-only (not in station or MM)
+    const SRC_AC_ONLY  = 3; // Quaternary: AC national-only (not in any above source)
+
 
     public static function normalize($artist, $title)
     {
@@ -911,7 +917,7 @@ class ModCiwvRadiochartsHelper
         };
 
         // Helper: build a single output row
-        $buildRow = function ($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb, $sourceGroup = 0) use ($getHistorical, $getFormatRank) {
+        $buildRow = function ($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb, $sourceGroup = self::SRC_STATION) use ($getHistorical, $getFormatRank) {
             // Streaming values and % Change direction (cols 13-14, 17-18 in new Streaming CSV)
             $streamsCa    = $s['CANADA'] ?? '';
             $streamsVan   = $s['MARKET'] ?? '';
@@ -1124,7 +1130,7 @@ class ModCiwvRadiochartsHelper
             $s     = $findStreaming($artist, $title);
             $bb    = $findBillboard($artist, $title);
 
-            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb, 0);
+            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb, self::SRC_STATION);
         }
 
         // --- Secondary: MusicMaster-only songs not in Station Playlist ---
@@ -1152,7 +1158,7 @@ class ModCiwvRadiochartsHelper
             $natAc = $findNationalAc($artist, $title);
             $s     = $findStreaming($artist, $title);
             $bb    = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s, $bb, 1);
+            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s, $bb, self::SRC_MM_ONLY);
         }
 
         // --- Tertiary: SJ national-only songs (not in station playlist or MusicMaster) ---
@@ -1178,7 +1184,7 @@ class ModCiwvRadiochartsHelper
             $natAc = $findNationalAc($artist, $title);
             $s     = $findStreaming($artist, $title);
             $bb    = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s, $bb, 2);
+            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s, $bb, self::SRC_SJ_ONLY);
         }
 
         // --- Quaternary: AC national-only songs (not already added) ---
@@ -1203,7 +1209,7 @@ class ModCiwvRadiochartsHelper
             $localSongs[]       = [$artist, $title];
             $s  = $findStreaming($artist, $title);
             $bb = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s, $bb, 3);
+            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s, $bb, self::SRC_AC_ONLY);
         }
 
         return [
