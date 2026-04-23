@@ -2,7 +2,7 @@ In the csv descriptions below the cells are identified by row#:col#
 
 . . . . . . . .
 
-National Mediabase Playlist Smooth Jazz Data Example
+Smooth Jazz - Mediabase National Playlist Data CSV
 
 Data File Location:
 data/NationalPlaylist_SJexample.csv
@@ -15,6 +15,7 @@ The first set of column id start on row 4 of the csv.
 
 4:1 - PK
 Denotes the peak ranking of a song nationally for this week.
+Module Table Placement: 2:7 Peak (subset of Chart Info section)
 
 4:2 - Rank
 This is the national rank of a song.
@@ -93,7 +94,208 @@ Has a subset at
 5:32 - Smooth Jazz
 5:33 - Big Picture (not used)
 
+
+. . . . . . . .
+
+Smooth Jazz - Mediabase National Playlist Data CSV
+
+Data File Location:
+data/NationalPlaylist_SJexample.csv
+
+this source is the Mediabase Published 7-Day Chart data for national tracking of songs' data.
+
+Date and csv information is found at 2:1
+
+The first set of column id start on row 4 of the csv.
+
+4:1 - PK
+Denotes the peak ranking of a song nationally for this week.
+Module Table Placement: 2:7 Peak (subset of Chart Info section)
+
+4:2 - Rank
+This is the national rank of a song.
+Has a subset at cells
+5:2 (LW - Last Week)
+5:3 (TW - This Week)
+
+4:4 - (up TW)
+This column denotes whether a song has moved up in rank.
+Yes = the song has improved ranking
+We want to make our final module output show the Rank TW in green if this column indicates Yes, but only in instances when our module table calls for Rank TW of a song.
+
+4:5 - Artist
+will need to account for differences in text case and how name is displayed between the different csv sources as there is not standardization between Mediabase, Luminate, or internally generated Music Master csv files. Decision making should rely more on the song title matching and the artist can be a 'close enough' matching check.
+
+4:6 - Title
+This is the song title, and is the first line of matching between csv sources. We must also account for discrepancies in text formatting as mentioned above for the artist name. In some cases the song title will be truncated in a source csv, or have punctuation like , . () " or - that may cause issues with matching songs across csv sources.
+
+4:7 - Label
+This is the record label owner of the song.
+
+4:8 - Wks ON
+This column signifies the number of weeks the song has been charting.
+
+4:9 - Spins
+The amount of plays a song received nationally.
+Spins has a subset at 
+5:9 (TW - This Week)
+5:10 (LW - Last Week)
+5:11 (+/- - the movement up or down between Spins TW and LW)
+
+4:12 - Dayparts
+These are the spins by different periods of the day as defined by radio. There will be certain instances where we want to ignore the over night OVN time period.
+Dayparts has a subset at
+5:12 (OVN - Overnights)
+5:13 (AMD - Mornings)
+5:14 (MID - Middays)
+5:15 (PMD - Afternoons)
+5:16 (EVE - Evenings)
+
+4:17 - Impressions
+Has a subset at 
+5:17 (TW - This Week)
+5:18 (LW - Last Week)
+5:19 (+/- - movement)
+5:20 (rTW - Rank This Week denotes the ranking of a song this week.)
+5:21 (rLW - Rank This Week denotes the ranking of a song this week.)
+
+4:22 - Stations
+This is the number of stations who have played the song.
+Stations has a subset at
+5:22 (On - Number of stations songs was on)
+5:23 (New - Number of station that just started playing the song)
+
+4:24 - Avg. Station Rotations
+This is the average number of plays and by how many stations.
+Avg. Station Rotations as a subset at
+5:24 (On - number of stations the song was played on.)
+5:25 (TW - This Week's average play rotation)
+5:26 (LW - Last Week's average play rotation)
+5:27 (+/- - The movement between LW and TW)
+
+4:28 - w/o OVN
+Denotes the rank and spins of a song.
+Has a subset at
+5:28 (Rank)
+5:29 (TW - This Week)
+
+4:30 - 6am to 7pm
+Denotes rank and spins for this day period.
+Has a subset at
+5:30 (Rank)
+5:31 (TW - This Week)
+
+4:32 - Format By Format Rank
+5:32 - Smooth Jazz
+5:33 - Big Picture (not used)
+
+
+. . . . . . . .
+
+Smooth Jazz - Mediabase National Playlist Data CSV
+
+Data File Location:
+data/NationalPlaylist_ACexample.csv
+
+this source is the Mediabase Published 7-Day Chart data for national tracking of songs' data.
+
+Date and csv information is found at 2:1
+
+The first set of column id start on row 4 of the csv.
+
+4:1 - PK
+Denotes the peak ranking of a song nationally for this week.
+Module Table Placement: 2:7 Peak (subset of Chart Info section)
+
+4:2 - Rank
+This is the national rank of a song.
+Has a subset at cells
+5:2 (LW - Last Week)
+5:3 (TW - This Week)
+
+4:4 - (up TW)
+This column denotes whether a song has moved up in rank.
+Yes = the song has improved ranking
+We want to make our final module output show the Rank TW in green if this column indicates Yes, but only in instances when our module table calls for Rank TW of a song.
+
+4:5 - Artist
+will need to account for differences in text case and how name is displayed between the different csv sources as there is not standardization between Mediabase, Luminate, or internally generated Music Master csv files. Decision making should rely more on the song title matching and the artist can be a 'close enough' matching check.
+
+4:6 - Title
+This is the song title, and is the first line of matching between csv sources. We must also account for discrepancies in text formatting as mentioned above for the artist name. In some cases the song title will be truncated in a source csv, or have punctuation like , . () " or - that may cause issues with matching songs across csv sources.
+
+4:7 - Label
+This is the record label owner of the song.
+
+4:8 - Cacon
+Denotes if a song is Canadian Content.
+Module Table Column: 2:3 - CC
+
+4:9 - Wks ON
+This column signifies the number of weeks the song has been charting.
+
+4:10 - Spins
+The amount of plays a song received nationally.
+Spins has a subset at 
+5:10 (TW - This Week)
+5:11 (LW - Last Week)
+5:12 (+/- - the movement up or down between Spins TW and LW)
+
+4:13 - Dayparts
+These are the spins by different periods of the day as defined by radio. There will be certain instances where we want to ignore the over night OVN time period.
+Dayparts has a subset at
+5:13 (OVN - Overnights)
+5:14 (AMD - Mornings)
+5:15 (MID - Middays)
+5:16 (PMD - Afternoons)
+5:17 (EVE - Evenings)
+
+4:18 - Impressions
+Use 5:20-22 to colour movement in our module table data.
+Has a subset at 
+5:18 (TW - This Week)
+5:19 (LW - Last Week)
+5:20 (+/- - movement)
+5:21 (rTW - Rank This Week denotes the ranking of a song this week.)
+5:22 (rLW - Rank This Week denotes the ranking of a song this week.)
+
+4:23 - Stations
+This is the number of stations who have played the song.
+Stations has a subset at
+5:23 (On - Number of stations songs was on)
+5:24 (New - Number of station that just started playing the song)
+
+4:25 - Avg. Station Rotations
+This is the average number of plays and by how many stations.
+Avg. Station Rotations as a subset at
+5:25 (On - number of stations the song was played on.)
+5:26 (TW - This Week's average play rotation)
+5:27 (LW - Last Week's average play rotation)
+5:28 (+/- - The movement between LW and TW)
+
+4:29 - w/o OVN
+Denotes the rank and spins of a song.
+Has a subset at
+5:29 (Rank)
+5:30 (TW - This Week)
+
+4:31 - 6am to 7pm
+Denotes rank and spins for this day period.
+Has a subset at
+5:31 (Rank)
+5:32 (TW - This Week)
+
+4:33 - Format By Format Rank
+5:34 - Canada-Hot AC
+5:35 - Canada-Main AC
+5:36 - Canada-Country
+5:37 - Canada-Active Rock
+5:38 - Canada-Alternative Rock
+5:39 - Big Picture (not used)
+
+
 . . . . . .
+
 
 Station Mediabase Data File Example
 
@@ -267,143 +469,34 @@ Leave empty until we learn more. I don not know how this data is calculated.
 . . . . . . .
 
 
-**NEW** Luminate Streaming Source csv example
+Luminate Streaming Source csv example
 
 File location: data/Streaming_example.csv
 
 This new csv source shows streaming data without the 8 rows of data for each song.
-In this new csv each song is on it's own row.
+In this new csv each song is in it's own row.
 
 1:1 - Title
+This will need to be matched up across the other csv sources.
+Module Table Column: 2:5 - Title
+
 1:2 - Artist
+This will need to be matched up across the other csv sources.
+Module Table Column: 2:4 - Artist
+
 1:14 - National Streams TW
+Denotes the total streams nationally of a song this week.
+Module Table Column: 2:10 #CA (a subset of OD Streams section)
+
 1:15 - % Change (since last week)
+Use to colour the movement of 1:14 - National Streams TW
+
 1:18 - Local Market Stream TW
+Denotes the total streams in-market of a song this week.
+Module Table Column: 2:10 #Van (a subset of OD Streams section)
+
 1:19 - % Change - Market
-
-
-. . . . . . . .
-
-LUMINATE STATION STREAMING DATA CSV EXAMPLE
-
-Data File Location:
-data/StreamingDataStation_example.csv
-
-This dataset has 6 row entries for every song. They are different as noted by the 1:7 Activity column as follows and in this order:
-Airplay Spins (current week)
-Airplay Spins (last week)
-Airplay Audience (current week)
-Airplay Audience (last week)
-Streams (current week)
-Streams (last week)
-
-
-1:1 - Location
-this column can be ignored
-
-1:2 - Title
-the title of the song, which as noted in our previous instructions needs to account for different text casing used, being truncated, or having punctuation, commas, hyphens, brackets, etc.
-
-1:3 - Artist
-The name of the artist that can be helpful in matching the data between csv source files.
-
-1:4 - Release Date
-The release date of the song.
-
-1:5 - Imprint Label
-This column can be ignored
-
-1:6 - Luminate ID
-this column can be ignored
-
-1:7 - Activity
-This is the type of spins being reported by this csv source file:
-Airplay Spins (current week)
-Airplay Spins (last week)
-Airplay Audience (current week)
-Airplay Audience (last week)
-Streams (current week)
-Streams (last week)
-
-1:8 - Week
-the number denoting the current week and the previous week.
-
-1:9 - Year
-This column can either be ignored, or be used.
-
-1:10 - Date
-this is the date start of the week being reported.
-
-1:11 - Rank
-the stations rank for airplay spins in this reporting.
-
-1:12 - Quantity
-the number of streams being reported for a song.
-
-1:13 - % Change
-the change between what's being reported week over week as per the two weeks indicated in 1:8.
-
-
-. . . . . . .
-
-
-Market-Based Streaming Luminate Data csv
-
-This csv source shows airplay and streaming data by market. In this case it is Vancouver, BC for our CIWV build example.
-
-Example DATA File Location:
-data/StreamingDataMarket_example.csv
-
-1:1 - Location
-This is the country column and can be ignored.
-
-1:2 - Market
-This column is used to indicate which rows contain market-based streaming data.
-
-1:3 - Title
-the title of the song, which as noted in our previous instructions needs to account for different text casing used, being truncated, or having punctuation, commas, hyphens, brackets, etc.
-
-1:4 - Artist
-The name of the artist that can be helpful in matching the data between csv source files.
-
-1:5 - Release Date
-The release date of the song.
-
-1:6 - Imprint Label
-This column can be ignored
-
-1:7 - Luminate ID
-this column can be ignored
-
-1:8 - Activity
-Remember that each song has these 8 row entries in this order.
-This is the type of spins being reported by this csv source file and relevant to column 1:9 which are the current week and last week:
-Airplay Spins (current week)
-Airplay Spins (last week)
-Airplay Audience (current week)
-Airplay Audience (last week)
-Streams (current week)
-Streams (last week)
-Streams (current week's market-based streaming data)
-Streams (last week's market-based streaming data)
-
-1:9 - Week
-the number denoting the current week and the previous week.
-
-1:10 - Year
-This column can either be ignored, or be used.
-
-1:11 - Date
-this is the date start and end of the week being reported on that row.
-
-1:12 - Rank
-the song ranking in this market's airplay and audience reporting.
-
-1:13 - Quantity
-the number of spins and streams being reported for a song.
-
-1:14 - % Change
-the change between what's being reported week over week as per the two weeks indicated in 1:9.
+Use to colour the movement of 1:18 - Local Market Stream TW
 
 
 . . . . . . .
@@ -415,30 +508,61 @@ Location: data/MusicMasterCSV_example.csv
 
 2:1 - Cat.
 This column denotes the TW category selection and should change this option in our dashboard automatically when uploaded.
+Module Table Column: 1:2 - TW (a subset of Category section)
 
 2:2 - Artist
-This will need to be matched up with the artists already in the dashboard from the other csv sources.
+This will need to be matched up across the other csv sources.
+Module Table Column: 2:4 - Artist
 
 2:3 - Title
-This will need to be matched to the Title/Artist in the main dashboard when uploaded.
+This will need to be matched up across the other csv sources.
+Module Table Column: 2:5 - Title
 
 2:4 - WKS
 The number of weeks the song has been in rotation on the station.
+Module Table Column: 2:6 - Weeks
 
 2:5 - [empty column title]
-This data should be injected into our module table based on our template (data/final-output-example.csv) at cell 2:5- CAT.
-As mention in the column description for data/final-output-example.csv, these column should be drop down selector with ascribed options, and should update automatcially when this Music Master CSV file is uploaded.
+This data should be injected into our module table based on our template (data/final-output-example.csv) at cell 2:7- CAT/CODE
+As mention in the column description for data/final-output-example.csv, this column should be drop down selector with ascribed options, and should update automatcially when this Music Master CSV file is uploaded.
 
 2:6 - SPINS
 The number of spins as reported by the station's Music Master system, for that week.
+Moving down through this csv source ther are several sets of data, but each has the same column id of: CAT.|ARTIST|TITLE|WKS|[empty]|SPINS
+Module Table Column: 2:8 TW (a subset of Spins section)
+
 
 . . . . .  .
 
+
 Billboard Chart Example Data
 
-Location: data/BillboardChart_example.csv
+Location: data/Billboard_example.csv
 
-not currently used but needs to be planned for as a final source to be injected into our module table as per the above output example csv.
+
+1:1 - Rank
+Denotes the rank of the relevant song.
+Module Table Column: 2:18 - BB SJ (subset in the Chart Info section)
+
+1:2 - Title
+The song title be matched so this data is ingested into our module table.
+Module Table Column: 2:5 - Title
+
+1:3 - Artist
+The artist name to assist in cong title matching, to be ingested into our module table.
+Module Table Column: 2:4 - Artist
+
+1:4 - Last Week
+The rank from last week, can be good for showing up or down movement, and should be colour with our Green and Red css options.
+
+1:5 - Peak Pos
+Not used
+
+1:6 - Weeks on Chart
+Not used
+
+
+. . . . . .
 
 
 
