@@ -353,7 +353,7 @@ $catOptionsMap = $buildOptionsMap($catOpts);
 <?php $hasCharts = !empty($chartSpinsTw) || !empty($chartNatSpins) || !empty($chartStreams) || !empty($chartCatDist); ?>
 <?php if ($hasCharts): ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
-        integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+        integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
         crossorigin="anonymous"></script>
 <script>
 (function () {
