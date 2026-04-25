@@ -308,13 +308,16 @@ $catOptionsMap = $buildOptionsMap($catOpts);
     usort($chartStreams, fn($a, $b) => $b['value'] <=> $a['value']);
     $chartStreams = array_slice($chartStreams, 0, 10);
 
-    // 4. TW Category Distribution
-    $chartCatDist = [];
+    // 4. Top 10 By Rank
+    $chartTopByRank = [];
     foreach ($rows as $r) {
-        $cat = (($r['TW'] ?? '') !== '' ? $r['TW'] : '(none)');
-        $chartCatDist[$cat] = ($chartCatDist[$cat] ?? 0) + 1;
+        $v = $numVal($r['Rk'] ?? '');
+        if ($v > 0) {
+            $chartTopByRank[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
     }
-    arsort($chartCatDist);
+    usort($chartTopByRank, fn($a, $b) => $a['value'] <=> $b['value']);
+    $chartTopByRank = array_slice($chartTopByRank, 0, 10);
 ?>
 <div class="rc-charts">
   <h3>Quick Glance – Week of <?= htmlspecialchars($selectedWeek) ?></h3>
@@ -341,16 +344,16 @@ $catOptionsMap = $buildOptionsMap($catOpts);
     </div>
     <?php endif; ?>
 
-    <?php if (!empty($chartCatDist)): ?>
-    <div class="rc-chart-wrap rc-chart-wrap--pie">
-      <h4>TW Category Distribution</h4>
-      <canvas id="rc-chart-catdist"></canvas>
+    <?php if (!empty($chartTopByRank)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – By Rank</h4>
+      <canvas id="rc-chart-top-rank" height="320"></canvas>
     </div>
     <?php endif; ?>
 
   </div>
 </div>
-<?php $hasCharts = !empty($chartSpinsTw) || !empty($chartNatSpins) || !empty($chartStreams) || !empty($chartCatDist); ?>
+<?php $hasCharts = !empty($chartSpinsTw) || !empty($chartNatSpins) || !empty($chartStreams) || !empty($chartTopByRank); ?>
 <?php if ($hasCharts): ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
         integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
@@ -380,25 +383,6 @@ $catOptionsMap = $buildOptionsMap($catOpts);
         scales: {
           x: { beginAtZero: true, ticks: { font: { size: 11 } } },
           y: { ticks: { font: { size: 11 } } }
-        }
-      }
-    });
-  }
-
-  // Doughnut chart helper
-  function makeDoughnut(id, labels, values, colors) {
-    var ctx = document.getElementById(id);
-    if (!ctx) return;
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{ data: values, backgroundColor: colors }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'right', labels: { font: { size: 11 } } }
         }
       }
     });
@@ -434,19 +418,13 @@ $catOptionsMap = $buildOptionsMap($catOpts);
   );
   <?php endif; ?>
 
-  <?php if (!empty($chartCatDist)):
-    $pieColors = [
-      'rgba(21,101,192,0.8)','rgba(46,125,50,0.8)','rgba(183,28,28,0.8)',
-      'rgba(230,81,0,0.8)','rgba(74,20,140,0.8)','rgba(0,131,143,0.8)',
-      'rgba(130,119,23,0.8)','rgba(216,27,96,0.8)','rgba(84,110,122,0.8)',
-      'rgba(27,94,32,0.8)','rgba(191,54,12,0.8)','rgba(0,77,64,0.8)'
-    ];
-  ?>
-  makeDoughnut(
-    'rc-chart-catdist',
-    <?= json_encode(array_keys($chartCatDist)) ?>,
-    <?= json_encode(array_values($chartCatDist)) ?>,
-    <?= json_encode(array_slice($pieColors, 0, count($chartCatDist))) ?>
+  <?php if (!empty($chartTopByRank)): ?>
+  makeBarChart(
+    'rc-chart-top-rank',
+    <?= json_encode(array_column($chartTopByRank, 'label')) ?>,
+    <?= json_encode(array_column($chartTopByRank, 'value')) ?>,
+    'Rank',
+    'rgba(106, 27, 154, 0.75)'
   );
   <?php endif; ?>
 }());
