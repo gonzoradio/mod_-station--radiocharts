@@ -18,8 +18,8 @@ class ModCiwvRadiochartsHelper
     public static $csvNames = [
         'national_sj' => 'NationalPlaylist_SJ',
         'national_ac' => 'NationalPlaylist_AC',
-        'station'     => 'StationPlaylist',
         'streaming'   => 'Streaming',
+        'station'     => 'StationPlaylist',
         'musicmaster' => 'MusicMasterCSV',
         'billboard'   => 'BillboardChart',
     ];
@@ -788,16 +788,6 @@ class ModCiwvRadiochartsHelper
 
         // --- National Playlist – Mainstream AC (MB Cht = CANAC, #Spins TW, #Stns TW) ---
         $nationalAcRows = $nationalAcFile ? self::parseNationalCsv($nationalAcFile) : [];
-        $nationalAcIdx  = [];
-        foreach ($nationalAcRows as $nr) {
-            $artist = $nr['Artist'] ?? '';
-            $title  = $nr['Title'] ?? '';
-            if ($artist === '' && $title === '') {
-                continue;
-            }
-            $key               = self::normalize($artist, $title);
-            $nationalAcIdx[$key] = $nr;
-        }
 
         // --- Music Master (TW category, WEEKS, CAT code, station Spins TW) ---
         $mmData = $mmFile ? self::parseMusicMasterCsv($mmFile) : [];
@@ -827,55 +817,6 @@ class ModCiwvRadiochartsHelper
                 }
             }
             return [];
-        };
-
-        // Helper: fuzzy-lookup MusicMaster data by artist/title
-        $findMM = function ($artist, $title) use ($mmData) {
-            $key = self::normalize($artist, $title);
-            if (isset($mmData[$key])) {
-                return $mmData[$key];
-            }
-            foreach ($mmData as $mKey => $mVal) {
-                if (self::titlesMatch($title, $mVal['title'])
-                    && (self::artistsMatch($artist, $mVal['artist']) || self::surnameMatch($artist, $mVal['artist']))) {
-                    return $mVal;
-                }
-            }
-            return null;
-        };
-
-        // Helper: fuzzy-lookup SJ national data by artist/title
-        $findNationalSj = function ($artist, $title) use ($nationalSjIdx) {
-            $key = self::normalize($artist, $title);
-            if (isset($nationalSjIdx[$key])) {
-                return $nationalSjIdx[$key];
-            }
-            foreach ($nationalSjIdx as $nKey => $nVal) {
-                $nArtist = $nVal['Artist'] ?? '';
-                $nTitle  = $nVal['Title'] ?? '';
-                if (self::titlesMatch($title, $nTitle)
-                    && (self::artistsMatch($artist, $nArtist) || self::surnameMatch($artist, $nArtist))) {
-                    return $nVal;
-                }
-            }
-            return null;
-        };
-
-        // Helper: fuzzy-lookup AC national data by artist/title
-        $findNationalAc = function ($artist, $title) use ($nationalAcIdx) {
-            $key = self::normalize($artist, $title);
-            if (isset($nationalAcIdx[$key])) {
-                return $nationalAcIdx[$key];
-            }
-            foreach ($nationalAcIdx as $nKey => $nVal) {
-                $nArtist = $nVal['Artist'] ?? '';
-                $nTitle  = $nVal['Title'] ?? '';
-                if (self::titlesMatch($title, $nTitle)
-                    && (self::artistsMatch($artist, $nArtist) || self::surnameMatch($artist, $nArtist))) {
-                    return $nVal;
-                }
-            }
-            return null;
         };
 
         // Helper: fuzzy-lookup Billboard data by artist/title
@@ -1107,109 +1048,173 @@ class ModCiwvRadiochartsHelper
             ];
         };
 
-        $final        = [];
-        $localKeysSet = [];
-        // Tracks [artist, title] of every row already added, used for fuzzy
-        // cross-source deduplication in the secondary and tertiary passes.
-        $localSongs   = [];
+        // ── Unified song slots ───────────────────────────────────────────────────
+        //
+        // Each entry: ['artist', 'title', 'pl', 'mm', 'natSj', 'natAc', 'src']
+        // Built in four passes so every song reaches the output exactly once with
+        // the richest available data attached.
+        //
+        // Pass 1a – Seed from SJ national (forms the national+luminate base).
+        // Pass 1b – Fuzzy-merge AC national: augment matching SJ entries or add AC-only.
+        // Pass 2  – Merge Station Playlist: enrich matching national entries or prepend new.
+        // Pass 3  – Overlay MusicMaster: overlay onto any matching entry or prepend new.
+        //
+        // Final row order:  station-prepend → MM-prepend → national base.
+        // JS re-sorts by TW category with SourceGroup as the tiebreaker, so station
+        // songs (SRC_STATION=0) always appear above national-only songs within a category.
 
-        // --- Primary: Station Playlist songs ---
-        foreach ($playlist as $pl) {
-            $artist = $pl['Artist'] ?? '';
-            $title  = $pl['Title'] ?? '';
+        $songs    = [];  // key => [artist, title, pl, mm, natSj, natAc, src]
+        $songKeys = [];  // insertion-ordered keys (national base order)
+
+        // Helper: find the key in $songs that fuzzy-matches (artist, title).
+        $findSongKey = function ($artist, $title) use (&$songs) {
+            $key = self::normalize($artist, $title);
+            if (isset($songs[$key])) {
+                return $key;
+            }
+            foreach ($songs as $k => $entry) {
+                if (self::titlesMatch($title, $entry['title'])
+                    && (self::artistsMatch($artist, $entry['artist']) || self::surnameMatch($artist, $entry['artist']))) {
+                    return $k;
+                }
+            }
+            return null;
+        };
+
+        // --- Pass 1a: SJ national rows form the initial national base ---
+        foreach ($nationalSjIdx as $key => $sjRow) {
+            $artist = trim($sjRow['Artist'] ?? '');
+            $title  = trim($sjRow['Title'] ?? '');
             if ($artist === '' && $title === '') {
                 continue;
             }
-            $key              = self::normalize($artist, $title);
-            $localKeysSet[$key] = true;
-            $localSongs[]       = [$artist, $title];
-
-            $mm    = $findMM($artist, $title);
-            $natSj = $findNationalSj($artist, $title);
-            $natAc = $findNationalAc($artist, $title);
-            $s     = $findStreaming($artist, $title);
-            $bb    = $findBillboard($artist, $title);
-
-            $final[] = $buildRow($artist, $title, $pl, $mm, $natSj, $natAc, $s, $bb, self::SRC_STATION);
+            $songs[$key] = [
+                'artist' => $artist,
+                'title'  => $title,
+                'pl'     => null,
+                'mm'     => null,
+                'natSj'  => $sjRow,
+                'natAc'  => null,
+                'src'    => self::SRC_SJ_ONLY,
+            ];
+            $songKeys[] = $key;
         }
 
-        // --- Secondary: MusicMaster-only songs not in Station Playlist ---
-        foreach ($mmData as $key => $mm) {
-            if (isset($localKeysSet[$key])) {
+        // --- Pass 1b: Merge AC national rows into the national base ---
+        foreach ($nationalAcRows as $acRow) {
+            $artist = trim($acRow['Artist'] ?? '');
+            $title  = trim($acRow['Title'] ?? '');
+            if ($artist === '' && $title === '') {
                 continue;
             }
-            $artist = $mm['artist'];
-            $title  = $mm['title'];
-            // Fuzzy dedup: skip if already added under a different artist/title variant
-            $dup = false;
-            foreach ($localSongs as [$la, $lt]) {
-                if (self::titlesMatch($title, $lt)
-                    && (self::artistsMatch($artist, $la) || self::surnameMatch($artist, $la))) {
-                    $dup = true;
-                    break;
-                }
+            $matchedKey = $findSongKey($artist, $title);
+            if ($matchedKey !== null) {
+                // Augment existing SJ entry with AC data
+                $songs[$matchedKey]['natAc'] = $acRow;
+            } else {
+                // AC-only song (not on the SJ chart)
+                $acKey = self::normalize($artist, $title);
+                $songs[$acKey] = [
+                    'artist' => $artist,
+                    'title'  => $title,
+                    'pl'     => null,
+                    'mm'     => null,
+                    'natSj'  => null,
+                    'natAc'  => $acRow,
+                    'src'    => self::SRC_AC_ONLY,
+                ];
+                $songKeys[] = $acKey;
             }
-            if ($dup) {
-                continue;
-            }
-            $localKeysSet[$key] = true;
-            $localSongs[]       = [$artist, $title];
-            $natSj = $findNationalSj($artist, $title);
-            $natAc = $findNationalAc($artist, $title);
-            $s     = $findStreaming($artist, $title);
-            $bb    = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, $mm, $natSj, $natAc, $s, $bb, self::SRC_MM_ONLY);
         }
 
-        // --- Tertiary: SJ national-only songs (not in station playlist or MusicMaster) ---
-        foreach ($nationalSjIdx as $key => $natSj) {
-            if (isset($localKeysSet[$key])) {
+        // --- Pass 2: Merge Station Playlist songs ---
+        // Songs matching an existing national entry enrich that entry and adopt
+        // the station's artist/title spelling as the canonical name.
+        // Station-only songs (no national match) are collected for prepending.
+        $stationPrependKeys = [];
+
+        foreach ($playlist as $plRow) {
+            $artist = trim($plRow['Artist'] ?? '');
+            $title  = trim($plRow['Title'] ?? '');
+            if ($artist === '' && $title === '') {
                 continue;
             }
-            $artist = $natSj['Artist'] ?? '';
-            $title  = $natSj['Title'] ?? '';
-            $dup = false;
-            foreach ($localSongs as [$la, $lt]) {
-                if (self::titlesMatch($title, $lt)
-                    && (self::artistsMatch($artist, $la) || self::surnameMatch($artist, $la))) {
-                    $dup = true;
-                    break;
+            $matchedKey = $findSongKey($artist, $title);
+            if ($matchedKey !== null) {
+                $songs[$matchedKey]['pl']     = $plRow;
+                $songs[$matchedKey]['src']    = self::SRC_STATION;
+                $songs[$matchedKey]['artist'] = $artist;
+                $songs[$matchedKey]['title']  = $title;
+            } else {
+                $stKey = self::normalize($artist, $title);
+                if (!isset($songs[$stKey])) {
+                    $songs[$stKey] = [
+                        'artist' => $artist,
+                        'title'  => $title,
+                        'pl'     => $plRow,
+                        'mm'     => null,
+                        'natSj'  => null,
+                        'natAc'  => null,
+                        'src'    => self::SRC_STATION,
+                    ];
+                    $stationPrependKeys[] = $stKey;
                 }
             }
-            if ($dup) {
-                continue;
-            }
-            $localKeysSet[$key] = true;
-            $localSongs[]       = [$artist, $title];
-            $natAc = $findNationalAc($artist, $title);
-            $s     = $findStreaming($artist, $title);
-            $bb    = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, $natSj, $natAc, $s, $bb, self::SRC_SJ_ONLY);
         }
 
-        // --- Quaternary: AC national-only songs (not already added) ---
-        foreach ($nationalAcIdx as $key => $natAc) {
-            if (isset($localKeysSet[$key])) {
-                continue;
-            }
-            $artist = $natAc['Artist'] ?? '';
-            $title  = $natAc['Title'] ?? '';
-            $dup = false;
-            foreach ($localSongs as [$la, $lt]) {
-                if (self::titlesMatch($title, $lt)
-                    && (self::artistsMatch($artist, $la) || self::surnameMatch($artist, $la))) {
-                    $dup = true;
-                    break;
+        // --- Pass 3: Overlay MusicMaster data ---
+        // MM data (TW category, weeks, code, spins) is overlaid on any existing entry.
+        // MM-only songs (not in national or station) are collected for prepending after
+        // station-only songs.
+        $mmPrependKeys = [];
+
+        foreach ($mmData as $mmKey => $mm) {
+            $matchedKey = $findSongKey($mm['artist'], $mm['title']);
+            if ($matchedKey !== null) {
+                $songs[$matchedKey]['mm'] = $mm;
+            } else {
+                if (!isset($songs[$mmKey])) {
+                    $songs[$mmKey] = [
+                        'artist' => $mm['artist'],
+                        'title'  => $mm['title'],
+                        'pl'     => null,
+                        'mm'     => $mm,
+                        'natSj'  => null,
+                        'natAc'  => null,
+                        'src'    => self::SRC_MM_ONLY,
+                    ];
+                    $mmPrependKeys[] = $mmKey;
                 }
             }
-            if ($dup) {
+        }
+
+        // --- Build final rows ---
+        // Row order: station-only prepend → MM-only prepend → national base.
+        // National entries enriched by station/MM data retain their national position
+        // here but are promoted to the top of each category by JS via SourceGroup.
+        $orderedKeys = array_merge($stationPrependKeys, $mmPrependKeys, $songKeys);
+
+        $final = [];
+        foreach ($orderedKeys as $key) {
+            // Defensive: skip if a key was registered but the entry was later
+            // overwritten via exact-key collision during AC or station merging.
+            if (!isset($songs[$key])) {
                 continue;
             }
-            $localKeysSet[$key] = true;
-            $localSongs[]       = [$artist, $title];
-            $s  = $findStreaming($artist, $title);
-            $bb = $findBillboard($artist, $title);
-            $final[] = $buildRow($artist, $title, null, null, null, $natAc, $s, $bb, self::SRC_AC_ONLY);
+            $entry = $songs[$key];
+            $s     = $findStreaming($entry['artist'], $entry['title']);
+            $bb    = $findBillboard($entry['artist'], $entry['title']);
+            $final[] = $buildRow(
+                $entry['artist'],
+                $entry['title'],
+                $entry['pl'],
+                $entry['mm'],
+                $entry['natSj'],
+                $entry['natAc'],
+                $s,
+                $bb,
+                $entry['src']
+            );
         }
 
         return [

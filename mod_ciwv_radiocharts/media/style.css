@@ -120,37 +120,37 @@
 
 /* Style cells that start with ▲ */
 .rc-stn-up:not(:empty) {
-    color: #e53935;
-    font-weight: bold;
+    color: #e53935!important;
+    font-weight: bold!important;
 }
 
 .rc-no-data {
-    padding: 1em;
-    font-style: italic;
-    color: #666;
+    padding: 1em!important;
+    font-style: italic!important;
+    color: #666!important;
 }
 
 /* Rk cell highlighted green when the SJ chart indicates the song moved up this week */
 .rc-rk-up {
-    color: #2e7d32;
-    font-weight: bold;
+    color: #2e7d32!important;
+    font-weight: bold!important;
 }
 
 /* Week-over-week direction indicators for numeric cells */
 .rc-val-up {
-    color: #2e7d32;
-    font-weight: bold;
+    color: #2e7d32!important;
+    font-weight: bold!important;
 }
 .rc-val-down {
-    color: #c62828;
-    font-weight: bold;
+    color: #c62828!important;
+    font-weight: bold!important;
 }
 
 /* CC (Canadian Content) indicator cell */
 .rc-cc-cell {
-    text-align: center;
-    font-weight: bold;
-    color: #1565c0;
+    text-align: center!important;
+    font-weight: bold!important;
+    color: #ff0000!important;
 }
 
 /* ── Row editor (shown for saved weeks only) ─────────────────────────────── */
