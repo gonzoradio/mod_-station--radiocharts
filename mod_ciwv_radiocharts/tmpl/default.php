@@ -266,3 +266,190 @@ $catOptionsMap = $buildOptionsMap($catOpts);
   <p class="rc-no-data">No data available. Upload your CSV files above to begin.</p>
 <?php endif; ?>
 </div>
+
+<?php if ($selectedWeek !== 'current' && !empty($rows)):
+    // ── Build chart datasets from the saved-week rows ──────────────────────
+
+    // Helper: strip commas/quotes and cast to int
+    $numVal = function ($v) {
+        return (int) str_replace([',', '"'], '', (string) $v);
+    };
+
+    // 1. Top 10 Station Spins TW
+    $chartSpinsTw = [];
+    foreach ($rows as $r) {
+        $v = $numVal($r['Spins TW'] ?? '');
+        if ($v > 0) {
+            $chartSpinsTw[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
+    }
+    usort($chartSpinsTw, fn($a, $b) => $b['value'] <=> $a['value']);
+    $chartSpinsTw = array_slice($chartSpinsTw, 0, 10);
+
+    // 2. Top 10 National Spins TW
+    $chartNatSpins = [];
+    foreach ($rows as $r) {
+        $v = $numVal($r['#Spins TW'] ?? '');
+        if ($v > 0) {
+            $chartNatSpins[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
+    }
+    usort($chartNatSpins, fn($a, $b) => $b['value'] <=> $a['value']);
+    $chartNatSpins = array_slice($chartNatSpins, 0, 10);
+
+    // 3. Top 10 Canada Streams
+    $chartStreams = [];
+    foreach ($rows as $r) {
+        $v = $numVal($r['#Streams CA'] ?? '');
+        if ($v > 0) {
+            $chartStreams[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
+    }
+    usort($chartStreams, fn($a, $b) => $b['value'] <=> $a['value']);
+    $chartStreams = array_slice($chartStreams, 0, 10);
+
+    // 4. TW Category Distribution
+    $chartCatDist = [];
+    foreach ($rows as $r) {
+        $cat = (($r['TW'] ?? '') !== '' ? $r['TW'] : '(none)');
+        $chartCatDist[$cat] = ($chartCatDist[$cat] ?? 0) + 1;
+    }
+    arsort($chartCatDist);
+?>
+<div class="rc-charts">
+  <h3>Quick Glance – Week of <?= htmlspecialchars($selectedWeek) ?></h3>
+  <div class="rc-charts-grid">
+
+    <?php if (!empty($chartSpinsTw)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – Station Spins TW</h4>
+      <canvas id="rc-chart-spins-tw" height="320"></canvas>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($chartNatSpins)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – National Spins TW</h4>
+      <canvas id="rc-chart-nat-spins" height="320"></canvas>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($chartStreams)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – Canada Streams</h4>
+      <canvas id="rc-chart-streams" height="320"></canvas>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($chartCatDist)): ?>
+    <div class="rc-chart-wrap rc-chart-wrap--pie">
+      <h4>TW Category Distribution</h4>
+      <canvas id="rc-chart-catdist"></canvas>
+    </div>
+    <?php endif; ?>
+
+  </div>
+</div>
+<?php $hasCharts = !empty($chartSpinsTw) || !empty($chartNatSpins) || !empty($chartStreams) || !empty($chartCatDist); ?>
+<?php if ($hasCharts): ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+        integrity="sha384-OLBgp1GsljhM2TJ+sbHjaiH9txEUvgdDTAzHv2P24donTt6/529l+9Ua0vFImLlb"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  'use strict';
+
+  // Horizontal bar chart helper
+  function makeBarChart(id, labels, values, label, color) {
+    var ctx = document.getElementById(id);
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: values,
+          backgroundColor: color
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { size: 11 } } },
+          y: { ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // Doughnut chart helper
+  function makeDoughnut(id, labels, values, colors) {
+    var ctx = document.getElementById(id);
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{ data: values, backgroundColor: colors }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: 'right', labels: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  <?php if (!empty($chartSpinsTw)): ?>
+  makeBarChart(
+    'rc-chart-spins-tw',
+    <?= json_encode(array_column($chartSpinsTw, 'label')) ?>,
+    <?= json_encode(array_column($chartSpinsTw, 'value')) ?>,
+    'Station Spins TW',
+    'rgba(21, 101, 192, 0.75)'
+  );
+  <?php endif; ?>
+
+  <?php if (!empty($chartNatSpins)): ?>
+  makeBarChart(
+    'rc-chart-nat-spins',
+    <?= json_encode(array_column($chartNatSpins, 'label')) ?>,
+    <?= json_encode(array_column($chartNatSpins, 'value')) ?>,
+    'National Spins TW',
+    'rgba(46, 125, 50, 0.75)'
+  );
+  <?php endif; ?>
+
+  <?php if (!empty($chartStreams)): ?>
+  makeBarChart(
+    'rc-chart-streams',
+    <?= json_encode(array_column($chartStreams, 'label')) ?>,
+    <?= json_encode(array_column($chartStreams, 'value')) ?>,
+    'Canada Streams',
+    'rgba(183, 28, 28, 0.75)'
+  );
+  <?php endif; ?>
+
+  <?php if (!empty($chartCatDist)):
+    $pieColors = [
+      'rgba(21,101,192,0.8)','rgba(46,125,50,0.8)','rgba(183,28,28,0.8)',
+      'rgba(230,81,0,0.8)','rgba(74,20,140,0.8)','rgba(0,131,143,0.8)',
+      'rgba(130,119,23,0.8)','rgba(216,27,96,0.8)','rgba(84,110,122,0.8)',
+      'rgba(27,94,32,0.8)','rgba(191,54,12,0.8)','rgba(0,77,64,0.8)'
+    ];
+  ?>
+  makeDoughnut(
+    'rc-chart-catdist',
+    <?= json_encode(array_keys($chartCatDist)) ?>,
+    <?= json_encode(array_values($chartCatDist)) ?>,
+    <?= json_encode(array_slice($pieColors, 0, count($chartCatDist))) ?>
+  );
+  <?php endif; ?>
+}());
+</script>
+<?php endif; // if ($hasCharts) ?>
+<?php endif; // if ($selectedWeek !== 'current' && !empty($rows)) ?>
