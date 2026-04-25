@@ -266,3 +266,168 @@ $catOptionsMap = $buildOptionsMap($catOpts);
   <p class="rc-no-data">No data available. Upload your CSV files above to begin.</p>
 <?php endif; ?>
 </div>
+
+<?php if ($selectedWeek !== 'current' && !empty($rows)):
+    // ── Build chart datasets from the saved-week rows ──────────────────────
+
+    // Helper: strip commas/quotes and cast to int
+    $numVal = function ($v) {
+        return (int) str_replace([',', '"'], '', (string) $v);
+    };
+
+    // 1. Top 10 Station Spins TW
+    $chartSpinsTw = [];
+    foreach ($rows as $r) {
+        $v = $numVal($r['Spins TW'] ?? '');
+        if ($v > 0) {
+            $chartSpinsTw[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
+    }
+    usort($chartSpinsTw, fn($a, $b) => $b['value'] <=> $a['value']);
+    $chartSpinsTw = array_slice($chartSpinsTw, 0, 10);
+
+    // 2. Top 10 National Spins TW
+    $chartNatSpins = [];
+    foreach ($rows as $r) {
+        $v = $numVal($r['#Spins TW'] ?? '');
+        if ($v > 0) {
+            $chartNatSpins[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
+    }
+    usort($chartNatSpins, fn($a, $b) => $b['value'] <=> $a['value']);
+    $chartNatSpins = array_slice($chartNatSpins, 0, 10);
+
+    // 3. Top 10 Canada Streams
+    $chartStreams = [];
+    foreach ($rows as $r) {
+        $v = $numVal($r['#Streams CA'] ?? '');
+        if ($v > 0) {
+            $chartStreams[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
+    }
+    usort($chartStreams, fn($a, $b) => $b['value'] <=> $a['value']);
+    $chartStreams = array_slice($chartStreams, 0, 10);
+
+    // 4. Top 10 By Rank
+    $chartTopByRank = [];
+    foreach ($rows as $r) {
+        $v = $numVal($r['Rk'] ?? '');
+        if ($v > 0) {
+            $chartTopByRank[] = ['label' => ($r['Artist'] ?? '') . ' – ' . ($r['Title'] ?? ''), 'value' => $v];
+        }
+    }
+    usort($chartTopByRank, fn($a, $b) => $a['value'] <=> $b['value']);
+    $chartTopByRank = array_slice($chartTopByRank, 0, 10);
+?>
+<div class="rc-charts">
+  <h3>Quick Glance – Week of <?= htmlspecialchars($selectedWeek) ?></h3>
+  <div class="rc-charts-grid">
+
+    <?php if (!empty($chartSpinsTw)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – Station Spins TW</h4>
+      <canvas id="rc-chart-spins-tw" height="320"></canvas>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($chartNatSpins)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – National Spins TW</h4>
+      <canvas id="rc-chart-nat-spins" height="320"></canvas>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($chartStreams)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – Canada Streams</h4>
+      <canvas id="rc-chart-streams" height="320"></canvas>
+    </div>
+    <?php endif; ?>
+
+    <?php if (!empty($chartTopByRank)): ?>
+    <div class="rc-chart-wrap">
+      <h4>Top 10 – By Rank</h4>
+      <canvas id="rc-chart-top-rank" height="320"></canvas>
+    </div>
+    <?php endif; ?>
+
+  </div>
+</div>
+<?php $hasCharts = !empty($chartSpinsTw) || !empty($chartNatSpins) || !empty($chartStreams) || !empty($chartTopByRank); ?>
+<?php if ($hasCharts): ?>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+        integrity="sha384-vsrfeLOOY6KuIYKDlmVH5UiBmgIdB1oEf7p01YgWHuqmOHfZr374+odEv96n9tNC"
+        crossorigin="anonymous"></script>
+<script>
+(function () {
+  'use strict';
+
+  // Horizontal bar chart helper
+  function makeBarChart(id, labels, values, label, color) {
+    var ctx = document.getElementById(id);
+    if (!ctx) return;
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: values,
+          backgroundColor: color
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { size: 11 } } },
+          y: { ticks: { font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  <?php if (!empty($chartSpinsTw)): ?>
+  makeBarChart(
+    'rc-chart-spins-tw',
+    <?= json_encode(array_column($chartSpinsTw, 'label')) ?>,
+    <?= json_encode(array_column($chartSpinsTw, 'value')) ?>,
+    'Station Spins TW',
+    'rgba(21, 101, 192, 0.75)'
+  );
+  <?php endif; ?>
+
+  <?php if (!empty($chartNatSpins)): ?>
+  makeBarChart(
+    'rc-chart-nat-spins',
+    <?= json_encode(array_column($chartNatSpins, 'label')) ?>,
+    <?= json_encode(array_column($chartNatSpins, 'value')) ?>,
+    'National Spins TW',
+    'rgba(46, 125, 50, 0.75)'
+  );
+  <?php endif; ?>
+
+  <?php if (!empty($chartStreams)): ?>
+  makeBarChart(
+    'rc-chart-streams',
+    <?= json_encode(array_column($chartStreams, 'label')) ?>,
+    <?= json_encode(array_column($chartStreams, 'value')) ?>,
+    'Canada Streams',
+    'rgba(183, 28, 28, 0.75)'
+  );
+  <?php endif; ?>
+
+  <?php if (!empty($chartTopByRank)): ?>
+  makeBarChart(
+    'rc-chart-top-rank',
+    <?= json_encode(array_column($chartTopByRank, 'label')) ?>,
+    <?= json_encode(array_column($chartTopByRank, 'value')) ?>,
+    'Rank',
+    'rgba(106, 27, 154, 0.75)'
+  );
+  <?php endif; ?>
+}());
+</script>
+<?php endif; // if ($hasCharts) ?>
+<?php endif; // if ($selectedWeek !== 'current' && !empty($rows)) ?>
