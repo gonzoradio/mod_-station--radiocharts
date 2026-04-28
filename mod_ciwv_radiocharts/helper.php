@@ -347,8 +347,8 @@ class ModCiwvRadiochartsHelper
             'X3'   => 'X3',
             'Z2'   => 'Z2',
             'Z3'   => 'Z3',
-            'Q'    => 'Q',
             'ADD'  => 'ADD',
+            'Q'    => 'Q',
             'OUT'  => 'OUT',
         ];
         return $map[$mm] ?? '';
