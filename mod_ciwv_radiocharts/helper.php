@@ -333,6 +333,7 @@ class ModCiwvRadiochartsHelper
 
     /**
      * Map a Music Master category abbreviation to the dashboard TW category.
+     * Returns the mapped category string, or '' if the value is not recognised.
      */
     private static function normaliseMmCategory($mmCat)
     {
