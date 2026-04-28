@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   // Custom sort order for TW category
-  const TW_ORDER = ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',''];
+  const TW_ORDER = ['J','P','H','PC2','PC3','X2','X3','Z2','Z3','Q','ADD','OUT',''];
 
   // Source-group constants (must match ModCiwvRadiochartsHelper in helper.php)
   const SRC_STATION = 0; // Station Playlist songs
@@ -40,9 +40,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const SRC_AC_ONLY = 3; // AC national-only songs
 
   // TW and NW option lists (must match helper.php)
-  const TW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT'];
-  const NW_VALS = ['','A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3','HOLD','ADD','Q','OUT',
-                   'A1?','J?','A2?','P?','B?','C?','D?','GOLD?','PC?','PC2?','PC3?','Q?','OUT?'];
+  const TW_VALS = ['','J','P','H','PC2','PC3','X2','X3','Z2','Z3','Q','ADD','OUT'];
+  const NW_VALS = ['','J','P','H','PC2','PC3','X2','X3','Z2','Z3','Q','ADD','OUT',
+                   'J?','P?','H?','PC2?','PC3?','X2?','X3?','Z2?','Z3?','Q?','OUT?'];
   const CAT_VALS = ['','1','2','3','S','PSG','G','F','GS','GP','P','V','T','TG','SP','TS','GT'];
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const groups     = {};
     const addsByNW   = {};
     const noCategory = [];
-    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(c => {
+    ['J','P','H','PC2','PC3','X2','X3','Z2','Z3'].forEach(c => {
       groups[c]   = [];
       addsByNW[c] = [];
     });
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     const finalRows = [];
-    ['A1','J','A2','P','B','C','D','GOLD','PC','PC2','PC3'].forEach(k => {
+    ['J','P','H','PC2','PC3','X2','X3','Z2','Z3'].forEach(k => {
       finalRows.push(...groups[k], ...addsByNW[k]);
     });
     finalRows.push(...others, ...noCategory);
