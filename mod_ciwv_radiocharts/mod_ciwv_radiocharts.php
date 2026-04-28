@@ -131,16 +131,20 @@ if ($selectedWeek === 'current' || !in_array($selectedWeek, (array) $allWeeks, t
         $key = ModCiwvRadiochartsHelper::normalize($row['Artist'] ?? '', $row['Title'] ?? '');
         if (isset($priorMap[$key])) {
             $prior = $priorMap[$key];
-            // Promote NW → TW if last week was ADD with a NW set
-            if (($prior['tw'] ?? '') === 'ADD' && !empty($prior['nw'])) {
-                $row['TW'] = $prior['nw'];
-                $row['NW'] = '';
-            } else {
-                if ($row['TW'] === '') {
-                    $row['TW'] = $prior['tw'] ?? '';
+            // Promote prior NW → TW for this week.
+            // Strip trailing '?' (NW uncertain variants) since TW has no '?' options.
+            // This applies to any song with a saved NW, not just ADD songs.
+            // TW is otherwise sourced fresh from the MM CSV upload; there is no
+            // fallback to the prior week's saved TW.
+            if (!empty($prior['nw'])) {
+                $nwVal      = $prior['nw'];
+                $promotedTw = (substr($nwVal, -1) === '?') ? substr($nwVal, 0, -1) : $nwVal;
+                if (in_array($promotedTw, ModCiwvRadiochartsHelper::$twCategories, true)) {
+                    $row['TW'] = $promotedTw;
                 }
-                $row['NW'] = '';
             }
+            // Always clear NW: MM CSV upload starts a fresh week.
+            $row['NW'] = '';
             // Station spins TW: use CSV +/- direction from $buildRow(); fall back to
             // DB prior-week comparison only when the CSV did not supply a value.
             if (($row['SpinsTwDir'] ?? '') === '') {
